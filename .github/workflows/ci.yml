@@ -46,7 +46,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          JAR=$(find build/libs -name "*.jar" ! -name "*-sources.jar")
           gh release create "${{ github.ref_name }}" \
-            build/libs/*.jar \
+            "$JAR" \
             --title "kotlin-tls-client ${{ github.ref_name }}" \
             --generate-notes

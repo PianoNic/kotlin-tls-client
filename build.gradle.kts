@@ -30,6 +30,11 @@ java {
     withSourcesJar()
 }
 
+// Exclude bundled native libraries from the sources JAR (they're binaries, not source)
+tasks.named<Jar>("sourcesJar") {
+    exclude("dev/kotlintls/natives/**")
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
