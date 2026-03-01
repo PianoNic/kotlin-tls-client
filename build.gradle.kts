@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "dev.kotlintls"
-version = "1.0.0"
+version = project.findProperty("releaseVersion")?.toString() ?: "dev"
 
 repositories {
     mavenCentral()
