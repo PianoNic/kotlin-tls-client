@@ -9,52 +9,10 @@ on:
 
 jobs:
 
-  # Build both macOS JNI bridges from a single Apple Silicon runner.
-  # clang supports cross-compiling to x86_64 via -arch.
-  # Go libs are already bundled in the repo (bogdanfinn prebuilts).
-  build-macos-jni:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { java-version: '21', distribution: 'temurin' }
-      - name: Build JNI bridges (arm64 + x86_64)
-        run: |
-          clang -dynamiclib -arch arm64 \
-            -o libtls_client_jni_arm64.dylib \
-            jni/tls_client_jni.c \
-            -I$JAVA_HOME/include -I$JAVA_HOME/include/darwin
-
-          clang -dynamiclib -arch x86_64 \
-            -o libtls_client_jni_x86_64.dylib \
-            jni/tls_client_jni.c \
-            -I$JAVA_HOME/include -I$JAVA_HOME/include/darwin
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-jni
-          path: |
-            libtls_client_jni_arm64.dylib
-            libtls_client_jni_x86_64.dylib
-
-  # Build the full JAR (injects macOS JNI bridges from the job above)
-  # and run all tests.
   build:
-    needs: build-macos-jni
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: macos-jni
-          path: macos-jni/
-
-      - name: Inject macOS JNI bridges into resources
-        run: |
-          mkdir -p src/main/resources/dev/kotlintls/natives/macos-arm64
-          mkdir -p src/main/resources/dev/kotlintls/natives/macos-x86_64
-          cp macos-jni/libtls_client_jni_arm64.dylib  src/main/resources/dev/kotlintls/natives/macos-arm64/libtls_client_jni.dylib
-          cp macos-jni/libtls_client_jni_x86_64.dylib src/main/resources/dev/kotlintls/natives/macos-x86_64/libtls_client_jni.dylib
 
       - uses: actions/setup-java@v4
         with: { java-version: '21', distribution: 'temurin' }
@@ -70,7 +28,6 @@ jobs:
           path: build/libs/*.jar
           retention-days: 7
 
-  # Create a GitHub Release with the JAR attached — only on version tags.
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
