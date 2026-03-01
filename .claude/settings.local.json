@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wsl bash:*)",
+      "Bash(powershell:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(cmd.exe:*)"
+    ]
+  }
+}
