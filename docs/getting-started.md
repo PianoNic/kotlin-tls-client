@@ -3,34 +3,29 @@
 ## Prerequisites
 
 - **Kotlin 1.9+** / **JVM 21+**
-- No other setup needed for basic use (OkHttp engine)
-- For real browser fingerprint: Android NDK + Go (see [TLS Fingerprinting](./TLS_FINGERPRINTING.md))
+- No other setup needed — native libraries are bundled in the JAR
 
 ## Installation
 
-### Gradle (Kotlin DSL)
+**Step 1** — Add JitPack to your repositories:
 
 ```kotlin
-dependencies {
-    implementation("dev.kotlin-tls:kotlin-tls-client:1.0.0")
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
 }
 ```
 
-### Gradle (Groovy)
+**Step 2** — Add the dependency:
 
-```groovy
+```kotlin
+// build.gradle.kts
 dependencies {
-    implementation 'dev.kotlin-tls:kotlin-tls-client:1.0.0'
+    implementation("com.github.PianoNic:kotlin-tls-client:v1.0.1")
 }
-```
-
-### Build from source
-
-```bash
-git clone <repo>
-cd kotlin-tls-client
-./gradlew build
-./gradlew publishToMavenLocal   # then use implementation("dev.kotlin-tls:kotlin-tls-client:1.0.0")
 ```
 
 ## Basic usage
@@ -77,39 +72,28 @@ val resp = session.post("https://httpbin.org/post", RequestOptions(
 println(resp.status)
 ```
 
-## Project structure
+### Real browser fingerprint (NativeTlsEngine)
 
-```
-your-project/
-├── build.gradle.kts
-└── src/main/kotlin/
-    └── Main.kt
-```
+The native libraries are already bundled in the JAR — no manual setup needed.
 
-For Android with native engine (real browser fingerprint):
-```
-your-app/
-├── src/main/
-│   ├── kotlin/...
-│   └── jniLibs/
-│       ├── arm64-v8a/
-│       │   ├── libtls_client_go.so
-│       │   └── libtls_client_jni.so
-│       └── armeabi-v7a/
-│           ├── libtls_client_go.so
-│           └── libtls_client_jni.so
+```kotlin
+val client = TlsClient(NativeTlsEngine())
+val session = Session(client, SessionOptions(
+    clientIdentifier = ClientIdentifier.CHROME_133
+))
+val resp = session.get("https://example.com")
 ```
 
 ## Next steps
 
 - [Session API](./api/session.md) – All session methods and options
 - [Types](./api/types.md) – Full list of request/response types
-- [TLS Fingerprinting](./TLS_FINGERPRINTING.md) – Making requests look like a real browser
+- [TLS Fingerprinting](./TLS_FINGERPRINTING.md) – How browser fingerprinting works
 
 ## Troubleshooting
 
 **`UnsatisfiedLinkError: tls_client_jni`**
-You called `NativeTlsEngine()` but the native `.so` files aren't loaded. Either load them manually (`System.loadLibrary(...)`) or use `TlsClient()` without an engine if you don't need browser fingerprinting.
+Your platform may not have a bundled native library yet. Check the [supported platforms](./api/native-engine.md#supported-platforms) list.
 
 **`IllegalStateException: Client not initialized`**
 You called `Client.getInstance()` without calling `Client.init()` first.

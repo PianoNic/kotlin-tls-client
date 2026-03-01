@@ -18,10 +18,10 @@ A Kotlin HTTP client with the same API as the Go and Node tls-clients.
 
 ### TLS Fingerprinting
 - [TLS Fingerprinting](./TLS_FINGERPRINTING.md) – What it is and your options
-- [What You Need To Do](./WHAT_YOU_NEED_TO_DO.md) – Step-by-step setup
+- [What You Need To Do](./WHAT_YOU_NEED_TO_DO.md) – Short answer: nothing, it's bundled
 
-### Building Native Libraries
-- [Building Natives](./building-natives.md) – How to rebuild the `.so` files from source (WSL + Android NDK)
+### Native Libraries
+- [Building Natives](./building-natives.md) – How natives are built and kept up to date automatically
 
 ## What you can do
 
