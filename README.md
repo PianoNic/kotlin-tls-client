@@ -14,28 +14,38 @@ Real browser fingerprint via native engine (Go tls-client + JNI)
 
 ## Installation
 
-**Gradle (Kotlin DSL):**
+**Step 1** — Add JitPack to your repositories:
+
 ```kotlin
-dependencies {
-    implementation("dev.kotlin-tls:kotlin-tls-client:1.0.0")
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
 }
 ```
 
-**Gradle (Groovy):**
+**Step 2** — Add the dependency:
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("com.github.PianoNic:kotlin-tls-client:v1.0.0")
+}
+```
+
+<details>
+<summary>Gradle (Groovy)</summary>
+
 ```groovy
-dependencies {
-    implementation 'dev.kotlin-tls:kotlin-tls-client:1.0.0'
-}
-```
+// settings.gradle
+maven { url 'https://jitpack.io' }
 
-**Build from source:**
-```bash
-git clone <repo>
-cd kotlin-tls-client
-./gradlew build
-# Windows: gradlew.bat build
-# Publish locally: ./gradlew publishToMavenLocal
+// build.gradle
+implementation 'com.github.PianoNic:kotlin-tls-client:v1.0.0'
 ```
+</details>
 
 ## Quick Start
 
