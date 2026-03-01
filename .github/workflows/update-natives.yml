@@ -1,0 +1,153 @@
+name: Update Native Libraries
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # daily at 8:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+
+  # ── Step 1: Check if bogdanfinn/tls-client has a newer release ──────────────
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      update: ${{ steps.check.outputs.update }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/bogdanfinn/tls-client/releases/latest \
+            | jq -r '.tag_name' | sed 's/^v//')
+          CURRENT=$(cat natives-version.txt 2>/dev/null || echo "none")
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "update=true"  >> $GITHUB_OUTPUT
+            echo "New version found: $LATEST (current: $CURRENT)"
+          else
+            echo "update=false" >> $GITHUB_OUTPUT
+            echo "Already up to date: $CURRENT"
+          fi
+
+  # ── Step 2a: Build Android Go libs using NDK (CI has SDK pre-installed) ─────
+  build-android:
+    needs: check
+    if: needs.check.outputs.update == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.23' }
+      - name: Build Android Go libraries
+        run: |
+          VERSION="${{ needs.check.outputs.version }}"
+          git clone --depth=1 --branch "v$VERSION" \
+            https://github.com/bogdanfinn/tls-client.git /tmp/tls-client
+
+          # Find NDK toolchain
+          NDK_BIN=$(find "$ANDROID_HOME/ndk" -name "aarch64-linux-android21-clang" | head -1 | xargs dirname)
+          echo "NDK bin: $NDK_BIN"
+
+          cd /tmp/tls-client/cffi_dist
+
+          echo "Building arm64-v8a..."
+          CC="$NDK_BIN/aarch64-linux-android21-clang" \
+          CGO_ENABLED=1 GOOS=android GOARCH=arm64 \
+          go build -buildmode=c-shared -o arm64.so .
+
+          echo "Building armeabi-v7a..."
+          CC="$NDK_BIN/armv7a-linux-androideabi21-clang" \
+          CGO_ENABLED=1 GOOS=android GOARCH=arm \
+          go build -buildmode=c-shared -o armv7.so .
+
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp arm64.so "$GITHUB_WORKSPACE/out/"
+          cp armv7.so "$GITHUB_WORKSPACE/out/"
+      - uses: actions/upload-artifact@v4
+        with: { name: android-go-libs, path: out/ }
+
+  # ── Step 2b: Build macOS JNI bridges (Go lib API never changes, only needed
+  #             if jni/tls_client_jni.c changes — but we rebuild for correctness) ──
+  build-macos-jni:
+    needs: check
+    if: needs.check.outputs.update == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { java-version: '21', distribution: 'temurin' }
+      - name: Build macOS JNI bridges
+        run: |
+          clang -dynamiclib -arch arm64 \
+            -o jni_arm64.dylib \
+            jni/tls_client_jni.c \
+            -I$JAVA_HOME/include -I$JAVA_HOME/include/darwin
+          clang -dynamiclib -arch x86_64 \
+            -o jni_x86_64.dylib \
+            jni/tls_client_jni.c \
+            -I$JAVA_HOME/include -I$JAVA_HOME/include/darwin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-jni
+          path: |
+            jni_arm64.dylib
+            jni_x86_64.dylib
+
+  # ── Step 3: Download desktop prebuilts, assemble everything, commit + tag ───
+  update:
+    needs: [check, build-android, build-macos-jni]
+    if: needs.check.outputs.update == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/download-artifact@v4
+        with: { name: android-go-libs, path: android-out/ }
+
+      - uses: actions/download-artifact@v4
+        with: { name: macos-jni, path: macos-out/ }
+
+      - name: Download desktop Go libraries
+        run: |
+          VERSION="${{ needs.check.outputs.version }}"
+          BASE="https://github.com/bogdanfinn/tls-client/releases/download/v$VERSION"
+
+          dl() { curl -fL --retry 3 -o "$1" "$2"; }
+
+          dl src/main/resources/dev/kotlintls/natives/linux-x86_64/libtls_client_go.so    "$BASE/tls-client-linux-ubuntu-amd64-$VERSION.so"
+          dl src/main/resources/dev/kotlintls/natives/linux-aarch64/libtls_client_go.so   "$BASE/tls-client-linux-arm64-$VERSION.so"
+          dl src/main/resources/dev/kotlintls/natives/windows-x86_64/tls_client_go.dll    "$BASE/tls-client-windows-64-$VERSION.dll"
+          dl src/main/resources/dev/kotlintls/natives/macos-arm64/libtls_client_go.dylib  "$BASE/tls-client-darwin-arm64-$VERSION.dylib"
+          dl src/main/resources/dev/kotlintls/natives/macos-x86_64/libtls_client_go.dylib "$BASE/tls-client-darwin-amd64-$VERSION.dylib"
+
+      - name: Place Android and macOS artifacts
+        run: |
+          cp android-out/arm64.so src/main/resources/dev/kotlintls/natives/arm64-v8a/libtls_client_go.so
+          cp android-out/armv7.so src/main/resources/dev/kotlintls/natives/armeabi-v7a/libtls_client_go.so
+          cp macos-out/jni_arm64.dylib  src/main/resources/dev/kotlintls/natives/macos-arm64/libtls_client_jni.dylib
+          cp macos-out/jni_x86_64.dylib src/main/resources/dev/kotlintls/natives/macos-x86_64/libtls_client_jni.dylib
+
+          echo "${{ needs.check.outputs.version }}" > natives-version.txt
+
+      - name: Commit, bump minor version, push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "chore: update native libraries to bogdanfinn/tls-client v${{ needs.check.outputs.version }} [skip ci]"
+          git push
+
+          # Bump minor version: v1.0.1 → v1.1.0
+          CURRENT=$(git describe --tags --abbrev=0)
+          MAJOR=$(echo "${CURRENT#v}" | cut -d. -f1)
+          MINOR=$(echo "${CURRENT#v}" | cut -d. -f2)
+          NEW_TAG="v$MAJOR.$((MINOR + 1)).0"
+
+          echo "Tagging $NEW_TAG"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
