@@ -16,8 +16,12 @@ internal object NativeLibLoader {
     fun ensureLoaded() {
         if (loaded) return
 
+        val isAndroid = try { Class.forName("android.os.Build"); true } catch (_: ClassNotFoundException) { false }
         val platform = detectPlatform()
-        if (platform != null) {
+
+        // On Android, System.load() from extracted tmpdir paths is blocked by the W^X security policy.
+        // The .so files must be bundled in the APK's jniLibs/ and loaded via System.loadLibrary().
+        if (platform != null && !isAndroid) {
             val goPath  = extract("dev/kotlintls/natives/${platform.dir}/${platform.goLib}",  "tls_client_go",  platform.ext)
             val jniPath = extract("dev/kotlintls/natives/${platform.dir}/${platform.jniLib}", "tls_client_jni", platform.ext)
             if (goPath != null && jniPath != null) {
@@ -28,7 +32,8 @@ internal object NativeLibLoader {
             }
         }
 
-        // Bundled lib not found for this platform — try pre-installed system libraries
+        // Android: load from APK's installed lib dir (jniLibs/).
+        // Other platforms: bundled lib not found — try pre-installed system libraries.
         try { System.loadLibrary("tls_client_go") } catch (_: Throwable) {}
         System.loadLibrary("tls_client_jni")
         loaded = true
