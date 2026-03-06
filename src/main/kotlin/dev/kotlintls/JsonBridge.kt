@@ -142,6 +142,14 @@ internal fun RequestPayload.toRequestJson(): String = gson.toJson(this.toRequest
 
 internal fun String.parseResponseJson(): ResponseData {
     val j = gson.fromJson(this, ResponseJson::class.java)
+        ?: return ResponseData(
+            status = 0,
+            body = this,
+            headers = emptyMap(),
+            cookies = emptyMap(),
+            target = "",
+            usedProtocol = "HTTP/1.1",
+        )
     return ResponseData(
         status = j.status,
         body = j.body,
@@ -164,6 +172,7 @@ internal fun GetCookiesFromSessionPayload.toJson(): String = gson.toJson(mapOf("
 internal data class GetCookiesResponseJson(val id: String, val cookies: List<CookieJson>)
 internal fun String.parseGetCookiesResponse(): GetCookiesFromSessionResponse {
     val j = gson.fromJson(this, GetCookiesResponseJson::class.java)
+        ?: return GetCookiesFromSessionResponse(id = "", cookies = emptyList())
     return GetCookiesFromSessionResponse(
         id = j.id,
         cookies = j.cookies.map { c -> Cookie(c.name, c.value, c.path, c.domain, c.expires, c.maxAge, c.secure, c.httpOnly) }

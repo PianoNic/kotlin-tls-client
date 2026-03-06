@@ -59,7 +59,13 @@ class TlsClient @JvmOverloads constructor(
         val url = payload.requestUrl
         val method = payload.requestMethod.name
         val body = payload.requestBody?.takeIf { it.isNotBlank() }
-            ?.let { it.toRequestBody(null) }
+            ?.let {
+                if (payload.isByteRequest) {
+                    java.util.Base64.getDecoder().decode(it).toRequestBody(null)
+                } else {
+                    it.toRequestBody(null)
+                }
+            }
 
         val requestBuilder = Request.Builder().url(url).method(method, body)
 
@@ -109,7 +115,11 @@ class TlsClient @JvmOverloads constructor(
             )
         }
 
-        val respBody = resp.body?.string() ?: ""
+        val respBody = if (payload.isByteResponse) {
+            java.util.Base64.getEncoder().encodeToString(resp.body?.bytes() ?: byteArrayOf())
+        } else {
+            resp.body?.string() ?: ""
+        }
         val respHeaders = resp.headers.toMultimap()
         val respCookies = cookieJar.get(url.toHttpUrlOrNull() ?: return responseFromOkHttp(resp, respBody, respHeaders, emptyMap(), url, if (useSession) sessionId else null))
             .associate { it.name to it.value }

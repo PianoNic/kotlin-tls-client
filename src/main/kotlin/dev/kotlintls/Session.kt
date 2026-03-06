@@ -55,6 +55,7 @@ data class RequestOptions(
     val isRotatingProxy: Boolean? = null,
     val cookies: Map<String, String> = emptyMap(),
     val byteResponse: Boolean = false,
+    val byteRequest: Boolean = false,
     val hostOverride: String? = null,
     val body: String? = null
 )
@@ -92,6 +93,7 @@ class Session(
             followRedirects = options.followRedirects ?: config.followRedirects,
             insecureSkipVerify = config.insecureSkipVerify,
             isByteResponse = options.byteResponse,
+            isByteRequest = options.byteRequest,
             proxyUrl = options.proxy ?: config.proxy,
             headers = headers,
             headerOrder = options.headerOrder.ifEmpty { config.headerOrder },
