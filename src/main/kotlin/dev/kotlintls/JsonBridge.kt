@@ -70,11 +70,11 @@ internal data class CustomTlsClientJson(
 internal data class PriorityParamJson(val streamDep: Int, val exclusive: Boolean, val weight: Int)
 internal data class PriorityFrameJson(val streamID: Int, val priorityParam: PriorityParamJson)
 
-/** Response as returned by Go FFI. */
+/** Response as returned by Go FFI. All fields nullable to survive malformed Gson output. */
 internal data class ResponseJson(
     val id: String? = null,
-    val status: Int,
-    val body: String,
+    val status: Int? = null,
+    val body: String? = null,
     val headers: Map<String, List<String>>? = null,
     val cookies: Map<String, String>? = null,
     val target: String? = null,
@@ -141,18 +141,21 @@ internal fun RequestPayload.toRequestInputJson(): RequestInputJson {
 internal fun RequestPayload.toRequestJson(): String = gson.toJson(this.toRequestInputJson())
 
 internal fun String.parseResponseJson(): ResponseData {
-    val j = gson.fromJson(this, ResponseJson::class.java)
-        ?: return ResponseData(
-            status = 0,
-            body = this,
-            headers = emptyMap(),
-            cookies = emptyMap(),
-            target = "",
-            usedProtocol = "HTTP/1.1",
-        )
+    val j = try {
+        gson.fromJson(this, ResponseJson::class.java)
+    } catch (_: Exception) {
+        null
+    } ?: return ResponseData(
+        status = 0,
+        body = this,
+        headers = emptyMap(),
+        cookies = emptyMap(),
+        target = "",
+        usedProtocol = "HTTP/1.1",
+    )
     return ResponseData(
-        status = j.status,
-        body = j.body,
+        status = j.status ?: 0,
+        body = j.body ?: "",
         headers = j.headers ?: emptyMap(),
         cookies = j.cookies ?: emptyMap(),
         target = j.target ?: "",
