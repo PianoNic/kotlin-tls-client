@@ -3,60 +3,60 @@ package dev.kotlintls
 import java.io.File
 
 /**
- * Extracts the bundled native libraries from the JAR resources and loads them.
- * Supports Android (arm64-v8a, armeabi-v7a), Linux (x86_64, aarch64),
- * macOS (arm64, x86_64), and Windows (x86_64).
- * Falls back to System.loadLibrary if no bundled lib matches the current platform.
+ * Extracts the bundled Go tls-client shared library from JAR resources and loads it via JNA.
+ * No JNI bridge needed — JNA calls the Go exports directly.
+ *
+ * Supports Linux (x86_64, aarch64), macOS (arm64, x86_64), Windows (x86_64).
+ * On Android or unsupported platforms, falls back to System.loadLibrary().
  */
 internal object NativeLibLoader {
 
-    @Volatile private var loaded = false
+    @Volatile
+    internal var instance: GoTlsClient? = null
 
     @Synchronized
-    fun ensureLoaded() {
-        if (loaded) return
+    fun ensureLoaded(): GoTlsClient {
+        instance?.let { return it }
 
         val isAndroid = try { Class.forName("android.os.Build"); true } catch (_: ClassNotFoundException) { false }
         val platform = detectPlatform()
 
-        // On Android, System.load() from extracted tmpdir paths is blocked by the W^X security policy.
-        // The .so files must be bundled in the APK's jniLibs/ and loaded via System.loadLibrary().
         if (platform != null && !isAndroid) {
-            val goPath  = extract("dev/kotlintls/natives/${platform.dir}/${platform.goLib}",  "tls_client_go",  platform.ext)
-            val jniPath = extract("dev/kotlintls/natives/${platform.dir}/${platform.jniLib}", "tls_client_jni", platform.ext)
-            if (goPath != null && jniPath != null) {
-                System.load(goPath)
-                System.load(jniPath)
-                loaded = true
-                return
+            val goPath = extract(
+                "dev/kotlintls/natives/${platform.dir}/${platform.goLib}",
+                "tls_client_go",
+                platform.ext
+            )
+            if (goPath != null) {
+                val lib = GoTlsClient.load(goPath)
+                instance = lib
+                return lib
             }
         }
 
-        // Android: load from APK's installed lib dir (jniLibs/).
-        // Other platforms: bundled lib not found — try pre-installed system libraries.
-        try { System.loadLibrary("tls_client_go") } catch (_: Throwable) {}
-        System.loadLibrary("tls_client_jni")
-        loaded = true
+        // Android or fallback: load from system path
+        val lib = GoTlsClient.loadSystem("tls_client_go")
+        instance = lib
+        return lib
     }
 
     private data class Platform(val dir: String, val ext: String) {
-        val goLib  get() = if (ext == "dll") "tls_client_go.$ext"  else "libtls_client_go.$ext"
-        val jniLib get() = if (ext == "dll") "tls_client_jni.$ext" else "libtls_client_jni.$ext"
+        val goLib get() = if (ext == "dll") "tls_client_go.$ext" else "libtls_client_go.$ext"
     }
 
     private fun detectPlatform(): Platform? {
-        val arch      = System.getProperty("os.arch")  ?: return null
-        val os        = System.getProperty("os.name")?.lowercase() ?: return null
+        val arch = System.getProperty("os.arch") ?: return null
+        val os = System.getProperty("os.name")?.lowercase() ?: return null
         val isAndroid = try { Class.forName("android.os.Build"); true } catch (_: ClassNotFoundException) { false }
 
         return when {
-            isAndroid && arch == "aarch64"            -> Platform("arm64-v8a",      "so")
-            isAndroid && arch in ARM32                -> Platform("armeabi-v7a",    "so")
-            os.contains("linux") && isAmd64(arch)    -> Platform("linux-x86_64",   "so")
-            os.contains("linux") && arch == "aarch64" -> Platform("linux-aarch64",  "so")
-            os.contains("mac")   && arch == "aarch64" -> Platform("macos-arm64",    "dylib")
-            os.contains("mac")   && isAmd64(arch)    -> Platform("macos-x86_64",   "dylib")
-            os.contains("windows") && isAmd64(arch)  -> Platform("windows-x86_64", "dll")
+            isAndroid && arch == "aarch64"             -> Platform("arm64-v8a", "so")
+            isAndroid && arch in ARM32                  -> Platform("armeabi-v7a", "so")
+            os.contains("linux") && isAmd64(arch)      -> Platform("linux-x86_64", "so")
+            os.contains("linux") && arch == "aarch64"  -> Platform("linux-aarch64", "so")
+            os.contains("mac") && arch == "aarch64"    -> Platform("macos-arm64", "dylib")
+            os.contains("mac") && isAmd64(arch)        -> Platform("macos-x86_64", "dylib")
+            os.contains("windows") && isAmd64(arch)    -> Platform("windows-x86_64", "dll")
             else -> null
         }
     }
