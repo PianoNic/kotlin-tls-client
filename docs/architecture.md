@@ -43,11 +43,11 @@ Holds a `sessionId` and a `SessionOptions` config. Each method call (`get`, `pos
 
 Core class. Two modes:
 - **Default (OkHttp):** Uses OkHttp internally. Session state (cookies, connections) stored in a `ConcurrentHashMap` keyed by `sessionId`.
-- **Native engine:** If constructed with `TlsClient(NativeTlsEngine())`, all calls are serialized to JSON and delegated to the Go tls-client via JNI. The Go library handles session state.
+- **Native engine:** If constructed with `TlsClient(NativeTlsEngine())`, all calls are serialized to JSON and delegated to the Go tls-client via JNA. The Go library handles session state.
 
 ### `TlsClientEngine` / `NativeTlsEngine`
 
-`TlsClientEngine` is an interface with four methods: `request`, `destroySession`, `getCookiesFromSession`, `destroyAll`. `NativeTlsEngine` implements it by calling the Go shared library through a C JNI bridge (`jni/tls_client_jni.c`).
+`TlsClientEngine` is an interface with four methods: `request`, `destroySession`, `getCookiesFromSession`, `destroyAll`. `NativeTlsEngine` implements it by calling the Go shared library directly via JNA (`GoTlsClient` interface).
 
 ### `Response` / `ResponseData`
 
@@ -73,8 +73,8 @@ Session.get(url)
   → TlsClient.request(RequestPayload)
     → payload.toRequestJson()          // serialize to JSON string
     → NativeTlsEngine.request(json)
-      → JNI → tls_client_jni.c
-        → dlsym("request") → Go tls-client
+      → JNA → GoTlsClient.request(json)
+        → Go tls-client performs request with uTLS
         → returns JSON string
     → json.parseResponseJson()         // deserialize
   → Response(data)

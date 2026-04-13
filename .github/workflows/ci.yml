@@ -1,11 +1,12 @@
-name: CI
+name: Build and Release
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
     branches: [main]
+  release:
+    types: [published]
 
 jobs:
 
@@ -19,12 +20,19 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build & test
+      - name: Extract version
+        id: version
         run: |
-          VERSION="${{ github.ref_name }}"
-          VERSION="${VERSION#v}"          # strip leading 'v' (v1.1.0 → 1.1.0)
-          [ -z "$VERSION" ] && VERSION="dev"
-          ./gradlew build -PreleaseVersion="$VERSION"
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION="dev"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build & test
+        run: ./gradlew build -PreleaseVersion="${{ steps.version.outputs.VERSION }}"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -34,24 +42,22 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
           name: jar
           path: build/libs/
 
-      - name: Create GitHub Release
+      - name: Upload release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          JAR=$(find build/libs -name "*.jar" ! -name "*-sources.jar")
-          gh release create "${{ github.ref_name }}" \
-            "$JAR" \
-            --title "kotlin-tls-client ${{ github.ref_name }}" \
-            --generate-notes
+          for JAR in build/libs/*.jar; do
+            [[ "$JAR" == *-sources.jar ]] && continue
+            gh release upload "${{ github.event.release.tag_name }}" "$JAR" \
+              --repo "${{ github.repository }}"
+          done

@@ -10,7 +10,7 @@ A Kotlin HTTP client library with the **same API as the Go [tls-client](https://
 
 Session-based requests • One-shot fetch • TLS profile identifiers (Chrome, Firefox, Safari, …)
 Cookie jar • Proxy • Header order • Custom TLS / JA3 API • Timeout • Redirects
-Real browser fingerprint via native engine (Go tls-client + JNI)
+Real browser fingerprint via native engine (Go tls-client + JNA)
 
 ## Installation
 
@@ -108,21 +108,13 @@ client.destroySession(DestroySessionPayload("my-session"))
 
 ## TLS fingerprinting
 
-By default the library uses OkHttp — requests don't mimic a specific browser. To get a **real browser fingerprint** (Chrome, Firefox, etc.):
+By default the library uses OkHttp — requests don't mimic a specific browser. To get a **real browser fingerprint** (Chrome, Firefox, etc.), use the native engine:
 
-1. Build the Go tls-client as a shared library for your target (Android arm64, etc.).
-2. Build the JNI bridge from `jni/tls_client_jni.c`.
-3. Load both at startup:
-   ```kotlin
-   System.loadLibrary("tls_client_go")
-   System.loadLibrary("tls_client_jni")
-   ```
-4. Use the native engine:
-   ```kotlin
-   val client = TlsClient(NativeTlsEngine())
-   ```
+```kotlin
+val client = TlsClient(NativeTlsEngine())
+```
 
-The `.so` files for Android are pre-built and included in `src/main/jniLibs/` (built via `build_android.sh`). See [TLS Fingerprinting](./docs/TLS_FINGERPRINTING.md) for the full explanation.
+The native Go libraries are bundled in the JAR for all supported platforms — no manual setup needed. JNA handles loading them automatically. See [TLS Fingerprinting](./docs/TLS_FINGERPRINTING.md) for the full explanation.
 
 ## Attribution
 

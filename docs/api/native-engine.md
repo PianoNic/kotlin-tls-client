@@ -1,6 +1,6 @@
 # NativeTlsEngine
 
-Makes requests look like a real browser (Chrome, Firefox, etc.) by using the Go tls-client under the hood via JNI. Gives you the same TLS fingerprint (JA3) as the Go and Node tls-clients.
+Makes requests look like a real browser (Chrome, Firefox, etc.) by using the Go tls-client under the hood via JNA. Gives you the same TLS fingerprint (JA3) as the Go and Node tls-clients.
 
 ## Setup
 
@@ -46,12 +46,11 @@ TlsClient(NativeTlsEngine())
   → NativeLibLoader.ensureLoaded()
       → detects platform/ABI
       → extracts bundled .so/.dylib/.dll from JAR to temp dir
-      → System.load(goLib), System.load(jniLib)
+      → JNA loads GoTlsClient from libtls_client_go
   → request(payload)
       → payload.toRequestJson()
-      → NativeTlsEngine.nativeRequest(json)
-        → JNI (tls_client_jni.c)
-          → dlsym("request") in libtls_client_go
+      → NativeTlsEngine.request(json)
+        → JNA → GoTlsClient.request(json)
           → Go tls-client performs request with uTLS
           → returns JSON response
       → json.parseResponseJson()
@@ -59,7 +58,7 @@ TlsClient(NativeTlsEngine())
 
 ## Native library versions
 
-The bundled Go libraries come from [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client). The current bundled version is tracked in [`natives-version.txt`](../../natives-version.txt) and updated automatically via the daily CI pipeline.
+The bundled Go libraries are built via the fork [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client) (auto-syncs with upstream [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client)). The current bundled version is tracked in [`natives-version.txt`](../../natives-version.txt) and updated automatically via the daily CI pipeline.
 
 ## Errors
 

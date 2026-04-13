@@ -5,7 +5,7 @@
 Some websites check **how** your app connects (not just the URL or headers). That check is called **TLS fingerprinting** (or JA3).
 
 - The **Go and Node** tls-clients can **pretend to be a real browser** (Chrome, Firefox, etc.) so the site sees a normal browser fingerprint.
-- This Kotlin library uses the same Go tls-client under the hood via JNI, so you get the **same fingerprint** out of the box.
+- This Kotlin library uses the same Go tls-client under the hood via JNA, so you get the **same fingerprint** out of the box.
 
 ---
 
