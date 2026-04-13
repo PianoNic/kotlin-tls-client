@@ -14,7 +14,7 @@ object Client {
     fun init() {
         if (instance == null) {
             synchronized(this) {
-                if (instance == null) instance = TlsClient()
+                if (instance == null) instance = TlsClient(NativeTlsEngine())
             }
         }
     }

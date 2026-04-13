@@ -172,12 +172,12 @@ internal fun ResponseData.toResponseJson(): String = gson.toJson(
 internal fun DestroySessionPayload.toJson(): String = gson.toJson(mapOf("sessionId" to sessionId))
 internal fun GetCookiesFromSessionPayload.toJson(): String = gson.toJson(mapOf("sessionId" to sessionId, "url" to url))
 
-internal data class GetCookiesResponseJson(val id: String, val cookies: List<CookieJson>)
+internal data class GetCookiesResponseJson(val id: String?, val cookies: List<CookieJson>?)
 internal fun String.parseGetCookiesResponse(): GetCookiesFromSessionResponse {
     val j = gson.fromJson(this, GetCookiesResponseJson::class.java)
         ?: return GetCookiesFromSessionResponse(id = "", cookies = emptyList())
     return GetCookiesFromSessionResponse(
-        id = j.id,
-        cookies = j.cookies.map { c -> Cookie(c.name, c.value, c.path, c.domain, c.expires, c.maxAge, c.secure, c.httpOnly) }
+        id = j.id ?: "",
+        cookies = j.cookies?.map { c -> Cookie(c.name, c.value, c.path, c.domain, c.expires, c.maxAge, c.secure, c.httpOnly) } ?: emptyList()
     )
 }
