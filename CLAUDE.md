@@ -45,10 +45,10 @@ When no `NativeTlsEngine` is provided, `TlsClient` uses plain OkHttp. This is in
 
 ### Native libraries
 
-- Bundled under `src/main/resources/dev/kotlintls/natives/{platform}/`
+- **Not stored in git** — downloaded at build time by Gradle `downloadNatives` task
 - Built via fork [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client) (auto-syncs with upstream bogdanfinn/tls-client)
-- Updated automatically via GitHub Actions
-- Version tracked in `natives-version.txt`
+- Version pinned in `natives-version.txt`, bumped automatically via PR when fork releases a new version
+- Cached in `build/natives/` — only downloads once until `./gradlew clean`
 
 ### Build
 
