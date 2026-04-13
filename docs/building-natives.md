@@ -1,52 +1,49 @@
-# Building the Native Libraries
+# Native Libraries
 
-The native libraries bundled in the JAR are the Go shared libraries (`libtls_client_go.*`) built from the fork at [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client), which auto-syncs with upstream [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client).
+The native Go shared libraries (`libtls_client_go.*`) are **not stored in the repo**. They are downloaded automatically at build time from the fork at [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client), which auto-syncs with upstream [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client).
 
 Since the library uses JNA (not JNI), there is no C bridge to compile — only the Go shared libraries are needed.
 
-The current bundled version is recorded in [`natives-version.txt`](../natives-version.txt).
+The pinned version is in [`natives-version.txt`](../natives-version.txt).
 
 ---
 
-## Automatic updates (CI)
+## How it works
 
-The repo includes a daily GitHub Actions pipeline (`.github/workflows/update-natives.yml`) that:
+1. `./gradlew build` triggers the `downloadNatives` task
+2. It downloads platform zips from `PianoNic/tls-client` GitHub releases
+3. Extracts them to `build/natives/dev/kotlintls/natives/{platform}/`
+4. They get bundled into the JAR via `processResources`
 
-1. Checks if the fork `PianoNic/tls-client` has published a new release
-2. If yes — downloads the new prebuilt Go libs for all platforms
-3. Commits the updated files, bumps the minor version (`v1.0.x` → `v1.1.0`), and pushes the tag
-4. The normal CI pipeline then builds and publishes a new GitHub Release automatically
+Downloads are cached in `build/natives/` — they only download once until you run `./gradlew clean`.
 
-You don't need to do anything — updates happen on their own.
+---
 
-To trigger it manually: **GitHub → Actions → Update Native Libraries → Run workflow**
+## Updating to a new version
+
+When a new version of tls-client is released:
+
+1. The fork's CI auto-syncs and builds new binaries
+2. The `update-natives.yml` workflow opens a PR bumping `natives-version.txt`
+3. Merge the PR → next build downloads the new binaries
+
+To bump manually:
+
+```bash
+echo "1.15.0" > natives-version.txt
+./gradlew clean build
+```
 
 ---
 
 ## Supported platforms
 
-| Directory | Platform | Go lib source |
-|---|---|---|
-| `arm64-v8a` | Android ARM64 | Built by fork CI |
-| `armeabi-v7a` | Android ARM32 | Built by fork CI |
-| `linux-x86_64` | Linux x86_64 | Built by fork CI |
-| `linux-aarch64` | Linux ARM64 | Built by fork CI |
-| `macos-arm64` | macOS Apple Silicon | Built by fork CI |
-| `macos-x86_64` | macOS Intel | Built by fork CI |
-| `windows-x86_64` | Windows x64 | Built by fork CI |
-
----
-
-## After updating natives
-
-Rebuild the JAR to include the updated libraries:
-
-```bash
-./gradlew jar
-```
-
-Or push a new tag to have CI build and release it automatically:
-
-```bash
-git tag v1.x.x && git push origin v1.x.x
-```
+| Directory | Platform |
+|---|---|
+| `linux-x86_64` | Linux x86_64 |
+| `linux-aarch64` | Linux ARM64 |
+| `windows-x86_64` | Windows x64 |
+| `macos-arm64` | macOS Apple Silicon |
+| `macos-x86_64` | macOS Intel |
+| `arm64-v8a` | Android ARM64 |
+| `armeabi-v7a` | Android ARM32 |
