@@ -33,15 +33,11 @@ This library wraps [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-cli
 
 ### Key layers
 
-- **`TlsClient`** — public entry point. If a `NativeTlsEngine` is provided, requests go through the Go TLS library with browser fingerprinting. Without an engine, requests fall back to plain OkHttp (no impersonation).
+- **`TlsClient`** — public entry point. All requests go through the native Go TLS engine. Defaults to `NativeTlsEngine()`.
 - **`NativeTlsEngine`** — calls Go `tls-client` shared library via JNA. Handles JSON serialization of requests/responses.
 - **`GoTlsClient`** — JNA interface that maps Go shared library functions to Kotlin.
 - **`NativeLibLoader`** — extracts and loads bundled native libraries per platform via JNA. Falls back to `System.loadLibrary()` on unsupported platforms or Android.
 - **`ClientIdentifier`** — enum of browser TLS profiles (Chrome, Firefox, Safari, Opera, etc.). Default: `CHROME_133`.
-
-### OkHttp fallback
-
-When no `NativeTlsEngine` is provided, `TlsClient` uses plain OkHttp. This is intentional — not every use case needs fingerprint impersonation, and not every platform has native libs available. Do not remove or warn about this fallback.
 
 ### Native libraries
 

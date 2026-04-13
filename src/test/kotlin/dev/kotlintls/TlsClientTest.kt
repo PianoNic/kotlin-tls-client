@@ -147,36 +147,4 @@ class TlsClientTest {
         assertTrue(result.success)
     }
 
-    // ── Native engine (JNA) ─────────────────────────────────────────────────
-
-    @Test
-    fun `NativeTlsEngine loads via JNA and makes a request`() {
-        val nativeClient = TlsClient(NativeTlsEngine())
-        val resp = nativeClient.request(
-            RequestPayload(
-                requestUrl = "https://httpbin.org/get",
-                tlsClientIdentifier = ClientIdentifier.DEFAULT.value
-            )
-        )
-        assertEquals(200, resp.status)
-        assertTrue(resp.body.isNotBlank())
-        nativeClient.destroyAll()
-    }
-
-    @Test
-    fun `NativeTlsEngine sends headers correctly`() {
-        val nativeClient = TlsClient(NativeTlsEngine())
-        val resp = nativeClient.request(
-            RequestPayload(
-                requestUrl = "https://httpbin.org/get",
-                tlsClientIdentifier = ClientIdentifier.DEFAULT.value,
-                headers = mapOf("X-Test" to "native-jna")
-            )
-        )
-        assertEquals(200, resp.status)
-        val json = JsonParser.parseString(resp.body).asJsonObject
-        val headers = json.getAsJsonObject("headers")
-        assertEquals("native-jna", headers.get("X-Test").asString)
-        nativeClient.destroyAll()
-    }
 }
