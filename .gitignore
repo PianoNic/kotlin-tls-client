@@ -22,3 +22,6 @@ local.properties
 
 # Logs / temp
 *.log
+
+# Native binaries (downloaded at build time from PianoNic/tls-client releases)
+src/main/resources/dev/kotlintls/natives/
