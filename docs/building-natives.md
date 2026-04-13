@@ -1,11 +1,8 @@
 # Building the Native Libraries
 
-The native libraries bundled in the JAR come from two sources:
+The native libraries bundled in the JAR are the Go shared libraries (`libtls_client_go.*`) built from the fork at [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client), which auto-syncs with upstream [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client).
 
-| Library | Source |
-|---|---|
-| `libtls_client_go.*` | Prebuilt releases from [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client) |
-| `libtls_client_jni.*` | Compiled from `jni/tls_client_jni.c` in this repo |
+Since the library uses JNA (not JNI), there is no C bridge to compile — only the Go shared libraries are needed.
 
 The current bundled version is recorded in [`natives-version.txt`](../natives-version.txt).
 
@@ -13,10 +10,10 @@ The current bundled version is recorded in [`natives-version.txt`](../natives-ve
 
 ## Automatic updates (CI)
 
-The repo includes a daily GitHub Actions pipeline (`.github/workflows/update-natives.yml`) that runs at **3:00 UTC** and:
+The repo includes a daily GitHub Actions pipeline (`.github/workflows/update-natives.yml`) that:
 
-1. Checks if `bogdanfinn/tls-client` has published a new release
-2. If yes — downloads the new prebuilt Go libs for all desktop platforms, rebuilds Android libs using NDK on CI, rebuilds macOS JNI bridges
+1. Checks if the fork `PianoNic/tls-client` has published a new release
+2. If yes — downloads the new prebuilt Go libs for all platforms
 3. Commits the updated files, bumps the minor version (`v1.0.x` → `v1.1.0`), and pushes the tag
 4. The normal CI pipeline then builds and publishes a new GitHub Release automatically
 
@@ -28,58 +25,19 @@ To trigger it manually: **GitHub → Actions → Update Native Libraries → Run
 
 ## Supported platforms
 
-| Directory | Platform | Go lib | JNI bridge |
-|---|---|---|---|
-| `arm64-v8a` | Android ARM64 | Built on CI (Android NDK) | Built on CI (Android NDK) |
-| `armeabi-v7a` | Android ARM32 | Built on CI (Android NDK) | Built on CI (Android NDK) |
-| `linux-x86_64` | Linux x86_64 | Prebuilt from bogdanfinn | Cross-compiled (gcc) |
-| `linux-aarch64` | Linux ARM64 | Prebuilt from bogdanfinn | Cross-compiled (aarch64-linux-gnu-gcc) |
-| `macos-arm64` | macOS Apple Silicon | Prebuilt from bogdanfinn | Built on macOS CI runner |
-| `macos-x86_64` | macOS Intel | Prebuilt from bogdanfinn | Cross-compiled on macOS runner (-arch x86_64) |
-| `windows-x86_64` | Windows x64 | Prebuilt from bogdanfinn | Cross-compiled (mingw-w64) |
+| Directory | Platform | Go lib source |
+|---|---|---|
+| `arm64-v8a` | Android ARM64 | Built by fork CI |
+| `armeabi-v7a` | Android ARM32 | Built by fork CI |
+| `linux-x86_64` | Linux x86_64 | Built by fork CI |
+| `linux-aarch64` | Linux ARM64 | Built by fork CI |
+| `macos-arm64` | macOS Apple Silicon | Built by fork CI |
+| `macos-x86_64` | macOS Intel | Built by fork CI |
+| `windows-x86_64` | Windows x64 | Built by fork CI |
 
 ---
 
-## Manual rebuild (if needed)
-
-### Android
-
-Requires WSL + Android NDK installed via Android Studio. Run:
-
-```bash
-bash build_android.sh
-```
-
-See the script itself for NDK detection and options.
-
-### Desktop (Linux, Windows)
-
-Requires WSL with `gcc`, `gcc-aarch64-linux-gnu`, `gcc-mingw-w64-x86-64` installed.
-Downloads prebuilt Go libs from bogdanfinn and cross-compiles the JNI bridges.
-
-```bash
-bash build_desktop.sh
-```
-
-### macOS JNI bridges
-
-Requires a macOS machine with Xcode command line tools and JDK 21.
-
-```bash
-clang -dynamiclib -arch arm64 -o libtls_client_jni_arm64.dylib \
-  jni/tls_client_jni.c \
-  -I$JAVA_HOME/include -I$JAVA_HOME/include/darwin
-
-clang -dynamiclib -arch x86_64 -o libtls_client_jni_x86_64.dylib \
-  jni/tls_client_jni.c \
-  -I$JAVA_HOME/include -I$JAVA_HOME/include/darwin
-```
-
-Then copy to `src/main/resources/dev/kotlintls/natives/macos-{arm64,x86_64}/libtls_client_jni.dylib`.
-
----
-
-## After rebuilding
+## After updating natives
 
 Rebuild the JAR to include the updated libraries:
 

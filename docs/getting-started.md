@@ -92,7 +92,7 @@ val resp = session.get("https://example.com")
 
 ## Troubleshooting
 
-**`UnsatisfiedLinkError: tls_client_jni`**
+**`UnsatisfiedLinkError`**
 Your platform may not have a bundled native library yet. Check the [supported platforms](./api/native-engine.md#supported-platforms) list.
 
 **`IllegalStateException: Client not initialized`**

@@ -29,13 +29,14 @@ These are the conventions to follow when contributing to this repo (humans or AI
 
 ## Architecture
 
-This library wraps [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client) (Go) via JNI to provide TLS fingerprint impersonation from Kotlin/JVM and Android.
+This library wraps [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-client) (Go) via JNA to provide TLS fingerprint impersonation from Kotlin/JVM and Android.
 
 ### Key layers
 
 - **`TlsClient`** — public entry point. If a `NativeTlsEngine` is provided, requests go through the Go TLS library with browser fingerprinting. Without an engine, requests fall back to plain OkHttp (no impersonation).
-- **`NativeTlsEngine`** — JNI bridge to the Go `tls-client` shared library. Handles JSON serialization of requests/responses.
-- **`NativeLibLoader`** — extracts and loads bundled native libraries per platform. Falls back to `System.loadLibrary()` on unsupported platforms or Android.
+- **`NativeTlsEngine`** — calls Go `tls-client` shared library via JNA. Handles JSON serialization of requests/responses.
+- **`GoTlsClient`** — JNA interface that maps Go shared library functions to Kotlin.
+- **`NativeLibLoader`** — extracts and loads bundled native libraries per platform via JNA. Falls back to `System.loadLibrary()` on unsupported platforms or Android.
 - **`ClientIdentifier`** — enum of browser TLS profiles (Chrome, Firefox, Safari, Opera, etc.). Default: `CHROME_133`.
 
 ### OkHttp fallback
@@ -45,9 +46,9 @@ When no `NativeTlsEngine` is provided, `TlsClient` uses plain OkHttp. This is in
 ### Native libraries
 
 - Bundled under `src/main/resources/dev/kotlintls/natives/{platform}/`
-- Updated automatically via GitHub Actions (daily check against bogdanfinn releases)
+- Built via fork [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client) (auto-syncs with upstream bogdanfinn/tls-client)
+- Updated automatically via GitHub Actions
 - Version tracked in `natives-version.txt`
-- JNI bridges built in CI for each platform
 
 ### Build
 
