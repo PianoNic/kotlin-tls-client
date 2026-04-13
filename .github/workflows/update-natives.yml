@@ -1,4 +1,4 @@
-name: Update Native Libraries
+name: Check for Native Library Updates
 
 on:
   schedule:
@@ -7,68 +7,48 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-
   check:
     runs-on: ubuntu-latest
-    outputs:
-      update: ${{ steps.check.outputs.update }}
-      version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      - id: check
+
+      - name: Check for new version
+        id: check
         run: |
           LATEST=$(curl -s https://api.github.com/repos/PianoNic/tls-client/releases/latest \
             | jq -r '.tag_name' | sed 's/^v//')
-          CURRENT=$(cat natives-version.txt 2>/dev/null || echo "none")
-          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          CURRENT=$(cat natives-version.txt)
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
           if [ "$LATEST" != "$CURRENT" ]; then
-            echo "update=true"  >> $GITHUB_OUTPUT
+            echo "update=true" >> $GITHUB_OUTPUT
           else
             echo "update=false" >> $GITHUB_OUTPUT
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  update:
-    needs: check
-    if: needs.check.outputs.update == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-
-      - name: Download binaries from fork
+      - name: Update version and open PR
+        if: steps.check.outputs.update == 'true'
         run: |
-          VERSION="${{ needs.check.outputs.version }}"
-          TAG="v$VERSION"
-          BASE="https://github.com/PianoNic/tls-client/releases/download/$TAG"
+          VERSION="${{ steps.check.outputs.latest }}"
+          BRANCH="update-natives-v$VERSION"
 
-          dl() { curl -fL --retry 3 -o "$1" "$2"; }
-          mkdir -p /tmp/natives
-
-          for platform in linux-x86_64 linux-aarch64 windows-x86_64 macos-arm64 macos-x86_64 arm64-v8a armeabi-v7a; do
-            dl "/tmp/natives/$platform.zip" "$BASE/$platform.zip"
-            mkdir -p "src/main/resources/dev/kotlintls/natives/$platform"
-            unzip -o "/tmp/natives/$platform.zip" -d "src/main/resources/dev/kotlintls/natives/$platform/"
-          done
-
-          echo "$VERSION" > natives-version.txt
-
-      - name: Commit, bump minor version, push tag
-        run: |
           git config user.name "PianoNic"
           git config user.email "79938743+PianoNic@users.noreply.github.com"
 
-          git add -A
-          git commit -m "Update native libraries to tls-client v${{ needs.check.outputs.version }} [skip ci]"
-          git push
+          git checkout -b "$BRANCH"
+          echo "$VERSION" > natives-version.txt
+          git add natives-version.txt
+          git commit -m "Bump native libraries to v$VERSION"
+          git push origin "$BRANCH"
 
-          CURRENT=$(git describe --tags --abbrev=0)
-          MAJOR=$(echo "${CURRENT#v}" | cut -d. -f1)
-          MINOR=$(echo "${CURRENT#v}" | cut -d. -f2)
-          NEW_TAG="v$MAJOR.$((MINOR + 1)).0"
-
-          git tag "$NEW_TAG"
-          git push origin "$NEW_TAG"
+          gh pr create \
+            --title "Bump native libraries to v$VERSION" \
+            --body "Updates \`natives-version.txt\` to v$VERSION. Binaries are downloaded at build time from [PianoNic/tls-client releases](https://github.com/PianoNic/tls-client/releases/tag/v$VERSION)." \
+            --label "enhancement"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
