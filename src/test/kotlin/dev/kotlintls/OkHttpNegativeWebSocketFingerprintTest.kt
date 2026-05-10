@@ -26,7 +26,11 @@ import java.util.concurrent.TimeUnit
  */
 class OkHttpNegativeWebSocketFingerprintTest {
 
-    private val client = OkHttpClient.Builder().build()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
     private val echoUrls = listOf(
         "wss://echo.websocket.org",
         "wss://ws.postman-echo.com/raw",
@@ -62,8 +66,20 @@ class OkHttpNegativeWebSocketFingerprintTest {
         ws!!.close(1000, "")
 
         // Step 2: HTTPS request to peet.ws via OkHttp → expect JDK-shaped JA4 (not Chrome).
+        // Retry-with-backoff because peet.ws occasionally hangs the read.
         val req = Request.Builder().url("https://tls.peet.ws/api/all").build()
-        val body = client.newCall(req).execute().use { it.body!!.string() }
+        var body: String? = null
+        var lastError: Throwable? = null
+        for (attempt in 1..3) {
+            try {
+                body = client.newCall(req).execute().use { it.body!!.string() }
+                break
+            } catch (t: Throwable) {
+                lastError = t
+                if (attempt < 3) Thread.sleep(2000L * attempt)
+            }
+        }
+        if (body == null) throw lastError ?: error("peet.ws unreachable")
         val tls = JsonParser.parseString(body).asJsonObject.getAsJsonObject("tls")
         val ja4 = tls.get("ja4").asString
 
