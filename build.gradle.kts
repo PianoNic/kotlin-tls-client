@@ -31,8 +31,11 @@ kotlin {
 // ── Download native libraries from fork releases ────────────────────────────
 
 val platforms = listOf(
-    "linux-x86_64", "linux-aarch64", "windows-x86_64",
-    "macos-arm64", "macos-x86_64", "arm64-v8a", "armeabi-v7a"
+    "android-arm64-v8a", "android-armeabi-v7a", "android-x86", "android-x86_64",
+    "windows-x86_64", "windows-arm64",
+    "linux-x86_64", "linux-aarch64", "linux-arm",
+    "macos-arm64", "macos-x86_64",
+    "freebsd-x86_64"
 )
 
 val downloadNatives by tasks.registering {

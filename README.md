@@ -12,7 +12,7 @@ A Kotlin HTTP client with browser TLS fingerprint impersonation. Wraps the Go [t
 - HTTP/HTTPS proxy, header order, timeouts, redirects
 - Custom JA3 string support
 - Native Go library bundled in the JAR — no manual setup
-- Works on JVM (Linux, macOS, Windows) and Android
+- Works on JVM (Linux, macOS, Windows, FreeBSD) and Android
 
 ## Installation
 
