@@ -18,19 +18,26 @@ A Kotlin HTTP client with browser TLS fingerprint impersonation. Wraps the Go [t
 
 The library JAR is ~95 KB of Kotlin code and does **not** bundle the native TLS engine. Two steps:
 
-1. Add the Gradle dep:
+**1. Add JitPack and the dependency:**
 
 ```kotlin
+// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+
+// build.gradle.kts
 dependencies {
     implementation("com.github.PianoNic:kotlin-tls-client:v2.0.0")
 }
 ```
 
-(plus JitPack in your repositories — see [Getting Started](./docs/getting-started.md#install)).
+**2. Download the native binary** for your target platform from the [latest natives release](https://github.com/PianoNic/kotlin-tls-client-natives/releases/latest) and put it where your JVM can find it.
 
-2. Download the native binary for your target platform from the [latest natives release](https://github.com/PianoNic/kotlin-tls-client-natives/releases/latest) and put it where your JVM can find it.
-
-The full per-platform table (file name, where to drop it for Linux / macOS / Windows / FreeBSD / Android), Gradle wiring snippets, and a build-from-source guide all live in [Getting Started](./docs/getting-started.md).
+The full per-platform table (file name + where to drop it for Linux / macOS / Windows / FreeBSD / Android), Gradle wiring snippets, troubleshooting tips, and a build-from-source guide all live in [Getting Started](./docs/getting-started.md).
 
 ## Quick Start
 
