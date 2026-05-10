@@ -1,4 +1,4 @@
-package dev.kotlintls
+package dev.kotlintls.internal
 
 import com.sun.jna.Library
 import com.sun.jna.Native

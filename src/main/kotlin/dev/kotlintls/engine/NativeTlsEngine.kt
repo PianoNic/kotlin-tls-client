@@ -1,4 +1,7 @@
-package dev.kotlintls
+package dev.kotlintls.engine
+
+import dev.kotlintls.internal.GoTlsClient
+import dev.kotlintls.internal.NativeLibLoader
 
 /**
  * Uses the Go tls-client library so your requests look like a real browser (Chrome, Firefox, etc.).

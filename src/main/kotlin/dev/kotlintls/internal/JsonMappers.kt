@@ -1,6 +1,13 @@
-package dev.kotlintls
+package dev.kotlintls.internal
 
 import com.google.gson.Gson
+import dev.kotlintls.Cookie
+import dev.kotlintls.DestroySessionPayload
+import dev.kotlintls.DestroySessionResponse
+import dev.kotlintls.GetCookiesFromSessionPayload
+import dev.kotlintls.GetCookiesFromSessionResponse
+import dev.kotlintls.RequestPayload
+import dev.kotlintls.ResponseData
 
 private val gson = Gson()
 
