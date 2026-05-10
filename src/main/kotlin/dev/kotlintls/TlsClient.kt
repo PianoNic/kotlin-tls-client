@@ -2,6 +2,12 @@ package dev.kotlintls
 
 import dev.kotlintls.engine.NativeTlsEngine
 import dev.kotlintls.engine.TlsClientEngine
+import dev.kotlintls.models.DestroySessionPayload
+import dev.kotlintls.models.DestroySessionResponse
+import dev.kotlintls.models.GetCookiesFromSessionPayload
+import dev.kotlintls.models.GetCookiesFromSessionResponse
+import dev.kotlintls.models.RequestPayload
+import dev.kotlintls.models.ResponseData
 import dev.kotlintls.internal.parseDestroySessionResponse
 import dev.kotlintls.internal.parseGetCookiesResponse
 import dev.kotlintls.internal.parseResponseJson

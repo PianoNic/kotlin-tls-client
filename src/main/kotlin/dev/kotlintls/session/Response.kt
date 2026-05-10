@@ -1,4 +1,6 @@
-package dev.kotlintls
+package dev.kotlintls.session
+
+import dev.kotlintls.models.ResponseData
 
 class Response(private val data: ResponseData) {
     val ok: Boolean get() = data.ok

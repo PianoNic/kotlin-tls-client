@@ -1,4 +1,4 @@
-package dev.kotlintls
+package dev.kotlintls.models
 
 /**
  * TLS client (browser) profile identifiers matching Go profiles.MappedTLSClients and Node ClientIdentifier.

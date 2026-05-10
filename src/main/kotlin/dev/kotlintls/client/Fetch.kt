@@ -1,4 +1,11 @@
-package dev.kotlintls
+package dev.kotlintls.client
+
+import dev.kotlintls.TlsClient
+import dev.kotlintls.models.RequestMethod
+import dev.kotlintls.models.RequestOptions
+import dev.kotlintls.models.SessionOptions
+import dev.kotlintls.session.Response
+import dev.kotlintls.session.Session
 
 /**
  * One-shot fetch: creates a session, performs one request, then closes the session.

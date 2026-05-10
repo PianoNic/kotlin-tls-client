@@ -1,5 +1,15 @@
-package dev.kotlintls
+package dev.kotlintls.session
 
+import dev.kotlintls.TlsClient
+import dev.kotlintls.models.Cookie
+import dev.kotlintls.models.CustomTlsClient
+import dev.kotlintls.models.DestroySessionPayload
+import dev.kotlintls.models.DestroySessionResponse
+import dev.kotlintls.models.GetCookiesFromSessionPayload
+import dev.kotlintls.models.RequestMethod
+import dev.kotlintls.models.RequestOptions
+import dev.kotlintls.models.RequestPayload
+import dev.kotlintls.models.SessionOptions
 import java.util.UUID
 
 class Session(

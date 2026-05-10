@@ -1,4 +1,12 @@
-import dev.kotlintls.*
+import dev.kotlintls.TlsClient
+import dev.kotlintls.client.Client
+import dev.kotlintls.client.fetch
+import dev.kotlintls.models.ClientIdentifier
+import dev.kotlintls.models.RequestMethod
+import dev.kotlintls.models.RequestOptions
+import dev.kotlintls.models.RequestPayload
+import dev.kotlintls.models.SessionOptions
+import dev.kotlintls.session.Session
 
 /**
  * Example matching Go tls-client and Node node-tls-client usage.
