@@ -35,9 +35,20 @@ dependencies {
 }
 ```
 
-**2. Download the native binary** for your target platform from the [latest natives release](https://github.com/PianoNic/kotlin-tls-client-natives/releases/latest) and put it where your JVM can find it.
+**2. Download the native binary** for your platform from the [latest natives release](https://github.com/PianoNic/kotlin-tls-client-natives/releases/latest) (e.g. `linux-x86_64.zip` for Linux x86_64).
 
-The full per-platform table (file name + where to drop it for Linux / macOS / Windows / FreeBSD / Android), Gradle wiring snippets, troubleshooting tips, and a build-from-source guide all live in [Getting Started](./docs/getting-started.md).
+**3. The easiest setup**: make a `natives/` directory at the root of your project, unpack the file from the zip into it, and tell Gradle to point the JVM at it:
+
+```kotlin
+// build.gradle.kts
+tasks.withType<JavaExec> {
+    systemProperty("java.library.path", "${rootDir}/natives")
+}
+```
+
+Now `./gradlew run` works.
+
+The per-platform table (which zip for which OS/arch), the Android `jniLibs/` story, alternative `LD_LIBRARY_PATH` / `PATH` setups, and a Troubleshooting section all live in [Getting Started](./docs/getting-started.md).
 
 ## Quick Start
 
