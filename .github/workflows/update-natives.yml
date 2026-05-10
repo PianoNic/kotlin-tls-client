@@ -18,7 +18,7 @@ jobs:
       - name: Check for new version
         id: check
         run: |
-          LATEST=$(curl -s https://api.github.com/repos/PianoNic/tls-client/releases/latest \
+          LATEST=$(curl -s https://api.github.com/repos/PianoNic/kotlin-tls-client-natives/releases/latest \
             | jq -r '.tag_name' | sed 's/^v//')
           CURRENT=$(cat natives-version.txt)
           echo "latest=$LATEST" >> $GITHUB_OUTPUT
@@ -48,7 +48,7 @@ jobs:
 
           gh pr create \
             --title "Bump native libraries to v$VERSION" \
-            --body "Updates \`natives-version.txt\` to v$VERSION. Binaries are downloaded at build time from [PianoNic/tls-client releases](https://github.com/PianoNic/tls-client/releases/tag/v$VERSION)." \
+            --body "Updates \`natives-version.txt\` to v$VERSION. Binaries are downloaded at build time from [PianoNic/kotlin-tls-client-natives releases](https://github.com/PianoNic/kotlin-tls-client-natives/releases/tag/v$VERSION)." \
             --label "enhancement"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
