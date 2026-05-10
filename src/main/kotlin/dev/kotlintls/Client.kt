@@ -1,5 +1,7 @@
 package dev.kotlintls
 
+import dev.kotlintls.engine.NativeTlsEngine
+
 /**
  * Singleton client holder matching Node initTLS() / destroyTLS() / getInstance().
  */

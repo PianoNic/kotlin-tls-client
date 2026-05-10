@@ -1,4 +1,4 @@
-package dev.kotlintls
+package dev.kotlintls.internal
 
 import java.io.File
 
