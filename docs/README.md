@@ -1,39 +1,21 @@
 # kotlin-tls-client Documentation
 
-A Kotlin HTTP client with the same API as the Go and Node tls-clients.
+## Getting started
 
-## Quick Navigation
+- **[Getting Started](./getting-started.md)** — Install, make your first request, pick a TLS profile
+- [TLS Fingerprinting](./tls-fingerprinting.md) — A short lesson: what JA3 is and why this library exists
 
-### Getting Started
-- [Getting Started](./getting-started.md) – Installation and setup
-- [Architecture](./architecture.md) – How the library is structured
+## API reference
 
-### API Reference
-- [TlsClient](./api/tls-client.md) – Low-level request, destroySession, getCookiesFromSession, destroyAll
-- [Session](./api/session.md) – get, post, put, delete, patch, head, options, close, cookies
-- [fetch](./api/fetch.md) – One-shot request
-- [Client](./api/client.md) – Global singleton (init / destroy / getInstance)
-- [Types](./api/types.md) – RequestPayload, ResponseData, SessionOptions, RequestOptions, Cookie, …
-- [NativeTlsEngine](./api/native-engine.md) – Real browser fingerprint (JA3) via Go tls-client
+All public types live under `dev.kotlintls.*`. Only `TlsClient` is at the package root; everything else is in a subpackage.
 
-### TLS Fingerprinting
-- [TLS Fingerprinting](./TLS_FINGERPRINTING.md) – What it is and your options
-- [What You Need To Do](./WHAT_YOU_NEED_TO_DO.md) – Short answer: nothing, it's bundled
+- [TlsClient](./api/tls-client.md) — Low-level entrypoint: `request`, `destroySession`, `getCookiesFromSession`, `destroyAll`
+- [Session](./api/session.md) — `get`, `post`, `put`, `delete`, `patch`, `head`, `options`, `close`, `cookies`
+- [fetch](./api/fetch.md) — One-shot request helper
+- [Client](./api/client.md) — Process-wide singleton (`init`, `destroy`, `getInstance`)
+- [Models](./api/models.md) — `RequestPayload`, `ResponseData`, `RequestOptions`, `SessionOptions`, `Cookie`, `ClientIdentifier`, …
+- [NativeTlsEngine](./api/native-engine.md) — How the Go tls-client is loaded via JNA
 
-### Native Libraries
-- [Building Natives](./building-natives.md) – How natives are built and kept up to date automatically
+## Internals
 
-## What you can do
-
-- **Session-based HTTP** – GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS with cookie jar and header order
-- **One-shot fetch** – Single request without managing sessions
-- **TLS profiles** – Set `clientIdentifier` to Chrome 103–146, Firefox, Safari, Opera, mobile apps
-- **Custom TLS / JA3** – Pass a JA3 string or full `CustomTlsClient` config
-- **Real browser fingerprint** – Use `NativeTlsEngine` with the Go tls-client native library
-- **Proxy** – HTTP proxy per session or per request
-- **Cookie jar** – Per-session cookies, `getCookiesFromSession`
-
-## Getting help
-
-- [Getting Started](./getting-started.md) for installation
-- [Architecture](./architecture.md) for internals
+- [Architecture](./architecture.md) — Package layout, ports & adapters, how a request flows through the library

@@ -1,65 +1,66 @@
 # Client
 
-Singleton that holds a shared `TlsClient`. Matches Node `initTLS()` / `destroyTLS()` / `getTLSClient()`.
+Process-wide singleton holding a default [`TlsClient`](./tls-client.md). Optional — useful when many call sites share the same engine and you want to avoid passing it around.
 
 ## Methods
 
-### `Client.init()`
+### init()
 
-Creates the shared `TlsClient`. Call once at startup.
+Initializes the singleton with a default `TlsClient(NativeTlsEngine())`. Idempotent and thread-safe.
 
 ```kotlin
+import dev.kotlintls.client.Client
+
 Client.init()
 ```
 
-Safe to call multiple times (no-op if already initialized).
+### getInstance(): TlsClient
 
-### `Client.destroy()`
+Returns the initialized client. Throws `IllegalStateException` if `init()` hasn't been called.
 
-Destroys all sessions and clears the shared client.
+```kotlin
+val client = Client.getInstance()
+```
+
+### destroy()
+
+Destroys all sessions and clears the singleton. Call this on shutdown.
 
 ```kotlin
 Client.destroy()
 ```
 
-### `Client.getInstance(): TlsClient`
+### isReady(): Boolean
 
-Returns the shared client. Throws `IllegalStateException` if `init()` was not called.
+Returns `true` after `init()` and before `destroy()`.
 
 ```kotlin
-val tlsClient = Client.getInstance()
+if (!Client.isReady()) Client.init()
 ```
 
-### `Client.isReady(): Boolean`
-
-Returns `true` if `init()` was called and the client is available.
+## Example
 
 ```kotlin
-if (Client.isReady()) {
-    val client = Client.getInstance()
+import dev.kotlintls.client.Client
+import dev.kotlintls.models.SessionOptions
+import dev.kotlintls.session.Session
+
+fun main() {
+    Client.init()
+
+    val s1 = Session(Client.getInstance(), SessionOptions(sessionId = "user-a"))
+    val s2 = Session(Client.getInstance(), SessionOptions(sessionId = "user-b"))
+
+    s1.get("https://httpbin.org/get")
+    s2.get("https://httpbin.org/get")
+
+    s1.close()
+    s2.close()
+    Client.destroy()
 }
 ```
-
-## Lifecycle
-
-```kotlin
-// At app startup
-Client.init()
-
-// Use the shared client via Session or directly
-val session = Session(Client.getInstance(), SessionOptions(...))
-
-// At app shutdown
-Client.destroy()
-```
-
-## Notes
-
-- `fetch()` automatically uses `Client.getInstance()` if the client is ready; otherwise it creates a temporary `TlsClient`.
-- You don't need to use `Client` at all if you manage `TlsClient` instances yourself.
 
 ## See also
 
 - [TlsClient](./tls-client.md)
-- [Session](./session.md)
-- [fetch](./fetch.md)
+- [fetch](./fetch.md) — Auto-uses the singleton when initialized

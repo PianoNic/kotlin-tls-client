@@ -1,10 +1,6 @@
 # fetch
 
-One-shot request. Creates a session, performs the request, closes the session. No state is kept.
-
-Matches the Node `fetch(url, options)` API.
-
-## Signature
+One-shot HTTP request. Creates a temporary [`Session`](./session.md), performs the call, closes the session.
 
 ```kotlin
 fun fetch(
@@ -15,44 +11,61 @@ fun fetch(
 ): Response
 ```
 
-## Usage
+If [`Client.init()`](./client.md) has been called, `fetch` reuses the shared `TlsClient`. Otherwise it constructs a temporary one for the call.
+
+## Quick examples
+
+### GET
 
 ```kotlin
-import dev.kotlintls.*
+import dev.kotlintls.client.fetch
 
-// Simple GET
 val resp = fetch("https://httpbin.org/get")
-println(resp.status)  // 200
+println(resp.status)
+println(resp.body)
+```
 
-// POST
+### POST with body and headers
+
+```kotlin
+import dev.kotlintls.client.fetch
+import dev.kotlintls.models.RequestMethod
+import dev.kotlintls.models.RequestOptions
+
 val resp = fetch(
     url = "https://httpbin.org/post",
     method = RequestMethod.POST,
     requestOptions = RequestOptions(
-        headers = mapOf("Content-Type" to "application/json"),
-        body = """{"key":"value"}"""
+        body = """{"key":"value"}""",
+        headers = mapOf("Content-Type" to "application/json")
     )
 )
-
-// With TLS profile and proxy
-val resp = fetch(
-    url = "https://httpbin.org/get",
-    options = SessionOptions(
-        clientIdentifier = ClientIdentifier.FIREFOX_133,
-        proxy = "http://proxy.example.com:8080",
-        followRedirects = true
-    )
-)
-println(resp.ok)
 ```
 
-## Notes
+### Custom TLS profile
 
-- If `Client.init()` was called, `fetch` reuses the shared `TlsClient`. Otherwise it creates a temporary one.
-- The session is always closed after the request, so cookies are not carried over between calls.
-- For persistent cookies across requests, use `Session` instead.
+```kotlin
+import dev.kotlintls.client.fetch
+import dev.kotlintls.models.ClientIdentifier
+import dev.kotlintls.models.RequestMethod
+import dev.kotlintls.models.SessionOptions
+
+val resp = fetch(
+    url = "https://tls.peet.ws/api/all",
+    method = RequestMethod.GET,
+    options = SessionOptions(clientIdentifier = ClientIdentifier.SAFARI_IOS_18_0)
+)
+```
+
+## When to use what
+
+| You want… | Use |
+|---|---|
+| One request, throwaway state | `fetch` |
+| Many requests, same cookie jar | [`Session`](./session.md) |
+| Full control over the Go FFI payload | [`TlsClient`](./tls-client.md) |
 
 ## See also
 
-- [Session](./session.md) – Persistent session with cookie jar
-- [Client](./client.md) – Shared client singleton
+- [Session](./session.md) — Stateful version
+- [Client](./client.md) — Optional shared singleton
