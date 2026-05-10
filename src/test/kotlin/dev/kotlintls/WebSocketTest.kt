@@ -20,7 +20,15 @@ import java.util.concurrent.atomic.AtomicReference
 class WebSocketTest {
 
     private val client = TlsClient()
-    private val echoUrl = "wss://ws.ifelse.io"
+
+    // Public WS echo servers — try in order; the test passes on the first one that
+    // accepts the upgrade. This insulates the suite from any single host going down
+    // or blocking CI runner IPs.
+    private val echoUrls = listOf(
+        "wss://echo.websocket.org",
+        "wss://ws.postman-echo.com/raw",
+        "wss://ws.ifelse.io"
+    )
 
     @Test
     fun `echoes a text message`() {
@@ -29,29 +37,39 @@ class WebSocketTest {
         val message = AtomicReference<String?>()
         val failure = AtomicReference<Throwable?>()
 
-        val ws = client.openWebSocket(
-            url = echoUrl,
-            headers = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
-            ),
-            listener = object : WebSocketListener {
-                override fun onOpen(webSocket: WebSocket) {
-                    opened.countDown()
-                    webSocket.send("ping-from-kotlin-tls-client")
-                }
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    if (text.contains("ping-from-kotlin-tls-client")) {
-                        message.set(text)
-                        received.countDown()
+        var ws: WebSocket? = null
+        var lastError: Throwable? = null
+        for (url in echoUrls) {
+            try {
+                ws = client.openWebSocket(
+                    url = url,
+                    headers = mapOf(
+                        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+                    ),
+                    listener = object : WebSocketListener {
+                        override fun onOpen(webSocket: WebSocket) {
+                            opened.countDown()
+                            webSocket.send("ping-from-kotlin-tls-client")
+                        }
+                        override fun onMessage(webSocket: WebSocket, text: String) {
+                            if (text.contains("ping-from-kotlin-tls-client")) {
+                                message.set(text)
+                                received.countDown()
+                            }
+                            // Some echos emit a banner; ignore frames that don't echo our payload.
+                        }
+                        override fun onFailure(webSocket: WebSocket, t: Throwable) {
+                            failure.set(t)
+                            opened.countDown(); received.countDown()
+                        }
                     }
-                    // ws.ifelse.io may emit informational frames; ignore them.
-                }
-                override fun onFailure(webSocket: WebSocket, t: Throwable) {
-                    failure.set(t)
-                    opened.countDown(); received.countDown()
-                }
+                )
+                break
+            } catch (t: Throwable) {
+                lastError = t
             }
-        )
+        }
+        if (ws == null) throw AssertionError("No WS echo server reachable; lastError=$lastError")
 
         try {
             assertTrue(opened.await(15, TimeUnit.SECONDS), "onOpen did not fire within 15s; failure=${failure.get()}")
