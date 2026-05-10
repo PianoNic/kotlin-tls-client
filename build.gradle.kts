@@ -99,10 +99,29 @@ java {
     withSourcesJar()
 }
 
+// Fat variant: code + every platform's native binary. Pick this when your app
+// ships as one JAR/distribution that has to run on multiple host OSes (e.g.
+// Compose Desktop, multi-arch Docker, anything where you can't predict the
+// runtime platform at build time). NativeLibLoader extracts the matching .so
+// from the JAR at first use.
+val allJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("all")
+    dependsOn(downloadNatives)
+    from(sourceSets.main.get().output)
+    from(nativesDir) {
+        into("")
+    }
+}
+
+tasks.named("assemble") {
+    dependsOn(allJar)
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
+            artifact(allJar)
             groupId = project.group.toString()
             artifactId = "kotlin-tls-client"
             version = project.version.toString()

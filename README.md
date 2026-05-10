@@ -16,9 +16,16 @@ A Kotlin HTTP client with browser TLS fingerprint impersonation. Wraps the Go [t
 
 ## Installation
 
-The library JAR is code only (~100 KB) and does not bundle the native TLS engine. You add the Kotlin dep, then drop the matching native binary onto your runtime path. See [Getting Started](./docs/getting-started.md) for the step-by-step.
+Two JAR variants ship per release. Pick the one that matches your distribution model.
 
-### 1. Add the Kotlin dependency
+| Variant | Size | When to use |
+|---|---|---|
+| `kotlin-tls-client:v2.0.0` (default, slim) | ~95 KB | You build for one target at a time (server deploy, dev machine, single-arch container). You provide the matching native binary yourself. |
+| `kotlin-tls-client:v2.0.0:all` (fat) | ~80 MB | Your app ships as one JAR that has to run on multiple host OSes (Compose Desktop, JavaFX bundle, multi-arch Docker). All 12 platform natives are bundled and the loader picks the right one at runtime. |
+
+### Slim (default)
+
+#### 1. Add the Kotlin dependency
 
 ```kotlin
 // settings.gradle.kts
@@ -35,7 +42,7 @@ dependencies {
 }
 ```
 
-### 2. Drop in the native binary for your platform
+#### 2. Drop in the native binary for your platform
 
 Download the zip for your target from the [latest natives release](https://github.com/PianoNic/kotlin-tls-client-natives/releases/latest) and unpack it.
 
@@ -61,6 +68,20 @@ java -Djava.library.path=/path/to/natives -jar your-app.jar
 ```
 
 For an Android module, the `.so` only needs to sit under `jniLibs/<abi>/` before the APK is built; the Android Gradle Plugin handles the rest.
+
+### Fat (multi-platform)
+
+If your app distribution has to run on multiple host OSes, use the `:all` classifier. Every native is bundled; the loader extracts the matching one at first use.
+
+```kotlin
+dependencies {
+    implementation("com.github.PianoNic:kotlin-tls-client:v2.0.0:all")
+}
+```
+
+No `java.library.path` setup. Just works on Linux, macOS, Windows, FreeBSD: the loader extracts the matching native to a temp directory at first call.
+
+**Android caveat**: the Android Gradle Plugin only auto-extracts natives from JAR dependencies if they live at `jni/<abi>/lib*.so`. Our fat JAR uses `dev/kotlintls/natives/<platform>/`, so AGP won't pick them up. On Android you still need to drop the matching `.so` into `app/src/main/jniLibs/<abi>/` (slim approach), even when the rest of your build uses the fat JAR.
 
 ## Quick Start
 

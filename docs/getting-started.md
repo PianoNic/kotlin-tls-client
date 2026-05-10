@@ -64,6 +64,20 @@ tasks.withType<JavaExec> {
 
 For an Android module, the `.so` only needs to sit under `jniLibs/<abi>/` before the APK is built; the Android Gradle Plugin handles packaging.
 
+### Multi-platform distributions: the `:all` classifier
+
+If your app ships as a single JAR that has to run on multiple host OSes (Compose Desktop, JavaFX bundle, multi-arch Docker image), use the fat variant. It bundles every native; `NativeLibLoader` extracts the matching one at first use.
+
+```kotlin
+dependencies {
+    implementation("com.github.PianoNic:kotlin-tls-client:v2.0.0:all")
+}
+```
+
+The fat JAR is ~80 MB. No `java.library.path` setup, no per-platform zip download.
+
+**Android note**: the Android Gradle Plugin only repackages natives from JAR deps if they live at `jni/<abi>/lib*.so`. Our fat JAR uses `dev/kotlintls/natives/<platform>/`, so AGP won't auto-extract them. On Android, keep using the slim approach with `jniLibs/` even if the rest of your build uses `:all`.
+
 ### Build from source
 
 ```bash
