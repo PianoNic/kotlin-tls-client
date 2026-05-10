@@ -8,6 +8,11 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
 
   build:
@@ -31,8 +36,29 @@ jobs:
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build & test
-        run: ./gradlew build -PreleaseVersion="${{ steps.version.outputs.VERSION }}"
+      - name: Compile
+        run: ./gradlew assemble -PreleaseVersion="${{ steps.version.outputs.VERSION }}" -x test
+
+      - name: Run tests
+        run: ./gradlew test --info -PreleaseVersion="${{ steps.version.outputs.VERSION }}"
+
+      - name: Publish test results
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: 'build/test-results/test/*.xml'
+          check_name: 'Test report'
+          detailed_summary: true
+          include_passed: true
+
+      - name: Upload test report HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
