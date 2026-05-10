@@ -81,26 +81,21 @@ val downloadNatives by tasks.registering {
     }
 }
 
-// Wire native download into resource processing
-tasks.processResources {
-    dependsOn(downloadNatives)
-    from(nativesDir) {
-        into("")
-    }
-}
-
 // ── Tests & packaging ───────────────────────────────────────────────────────
 
+// Native libraries are NOT bundled into the published JAR. Users download the
+// binary for their target platform from kotlin-tls-client-natives releases and
+// place it where the JVM can find it (java.library.path, jniLibs/ on Android).
+// The downloaded natives are still wired onto the test classpath so the test
+// suite can load them locally.
 tasks.test {
     useJUnitPlatform()
+    dependsOn(downloadNatives)
+    classpath += files(nativesDir)
 }
 
 java {
     withSourcesJar()
-}
-
-tasks.named<Jar>("sourcesJar") {
-    exclude("dev/kotlintls/natives/**")
 }
 
 publishing {

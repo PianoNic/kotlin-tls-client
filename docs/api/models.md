@@ -137,7 +137,7 @@ Categories: Chrome (103–146), Firefox (102–147), Safari (15–18, iOS varian
 
 ### CustomTlsClient
 
-Full TLS spec. Use this when you need more control than `ja3String` alone — HTTP/2 settings, pseudo-header order, priority frames, supported versions, etc.
+Full TLS spec. Use this when you need more control than `ja3String` alone, HTTP/2 settings, pseudo-header order, priority frames, supported versions, etc.
 
 ### TransportOptions
 
@@ -165,4 +165,4 @@ HTTP/2 priority frames, used inside `CustomTlsClient`.
 
 - [TlsClient](./tls-client.md)
 - [Session](./session.md)
-- [TLS Fingerprinting](../tls-fingerprinting.md) — What `ClientIdentifier` and `CustomTlsClient` actually do
+- [TLS Fingerprinting](../tls-fingerprinting.md): what `ClientIdentifier` and `CustomTlsClient` actually do

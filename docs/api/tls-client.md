@@ -1,6 +1,6 @@
 # TlsClient
 
-The low-level entrypoint. Sends a `RequestPayload` through a `TlsClientEngine` and returns a `ResponseData`. Most users go through [`Session`](./session.md) or [`fetch`](./fetch.md) instead — use `TlsClient` directly when you need full control over the payload.
+The low-level entrypoint. Sends a `RequestPayload` through a `TlsClientEngine` and returns a `ResponseData`. Most users go through [`Session`](./session.md) or [`fetch`](./fetch.md) instead, use `TlsClient` directly when you need full control over the payload.
 
 ## Setup
 
@@ -96,6 +96,6 @@ fun main() {
 
 ## See also
 
-- [Session](./session.md) — Higher-level wrapper for repeated requests
-- [Models](./models.md) — `RequestPayload`, `ResponseData`, and friends
-- [NativeTlsEngine](./native-engine.md) — The default transport
+- [Session](./session.md), Higher-level wrapper for repeated requests
+- [Models](./models.md), `RequestPayload`, `ResponseData`, and friends
+- [NativeTlsEngine](./native-engine.md), The default transport

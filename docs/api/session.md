@@ -54,7 +54,7 @@ jar.forEach { println("${it.name}=${it.value}") }
 
 ## Properties
 
-- **`sessionId: String`** — The session ID. Auto-generated UUID unless you pass `SessionOptions(sessionId = ...)`.
+- **`sessionId: String`**: the session ID. Auto-generated UUID unless you pass `SessionOptions(sessionId = ...)`.
 
 ## SessionOptions
 
@@ -117,7 +117,7 @@ fun main() {
         headers = mapOf("Content-Type" to "application/x-www-form-urlencoded")
     ))
 
-    // Authenticated call — cookies from /login are reused automatically
+    // Authenticated call, cookies from /login are reused automatically
     val resp = session.get("https://example.com/account")
     println(resp.status)
     println(resp.body)
@@ -129,6 +129,6 @@ fun main() {
 
 ## See also
 
-- [TlsClient](./tls-client.md) — The underlying client
-- [fetch](./fetch.md) — One-shot version when you don't need a session
-- [Models](./models.md) — `SessionOptions`, `RequestOptions`, `Response`, `Cookie`
+- [TlsClient](./tls-client.md): the underlying client
+- [fetch](./fetch.md): one-shot version when you don't need a session
+- [Models](./models.md): `SessionOptions`, `RequestOptions`, `Response`, `Cookie`

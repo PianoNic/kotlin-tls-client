@@ -6,7 +6,7 @@ For background on *why* this matters, see [TLS Fingerprinting](../tls-fingerprin
 
 ## Usage
 
-`TlsClient()` already uses it — you usually don't need to construct one yourself.
+`TlsClient()` already uses it, you usually don't need to construct one yourself.
 
 ```kotlin
 import dev.kotlintls.TlsClient
@@ -18,11 +18,13 @@ val explicit = TlsClient(NativeTlsEngine())  // same as TlsClient()
 ## How the native lib is loaded
 
 1. On first use, `NativeLibLoader` detects your OS + architecture.
-2. It extracts the matching shared library from `dev/kotlintls/natives/<platform>/` inside the JAR to a temp directory.
-3. JNA loads it.
-4. The handle is cached for the rest of the JVM lifetime.
+2. It calls `Native.load("tls_client_go", ...)` (JNA's by-name lookup), which searches:
+   - `java.library.path`
+   - the OS library path (`LD_LIBRARY_PATH` on Linux/FreeBSD, `DYLD_LIBRARY_PATH` on macOS, `PATH` on Windows)
+   - on Android: the APK's `lib/<abi>/` directory (populated from `jniLibs/`)
+3. The handle is cached for the rest of the JVM lifetime.
 
-On Android, `System.loadLibrary("tls_client_go")` is used instead, because Android's W^X policy blocks executing files extracted to the temp dir.
+The JAR does **not** carry the native binary. You download the matching zip from [kotlin-tls-client-natives releases](https://github.com/PianoNic/kotlin-tls-client-natives/releases/latest) and put the file where the JVM can find it. See the [getting-started guide](../getting-started.md#install) for the per-platform table.
 
 ## Supported platforms
 
@@ -40,7 +42,7 @@ The native libraries aren't stored in git. The Gradle `downloadNatives` task fet
 
 ## Implementing a different engine
 
-Anything implementing [`TlsClientEngine`](../architecture.md#port--tlsclientengine) works as a drop-in replacement — useful for unit tests:
+Anything implementing [`TlsClientEngine`](../architecture.md#port--tlsclientengine) works as a drop-in replacement, useful for unit tests:
 
 ```kotlin
 import dev.kotlintls.TlsClient
@@ -58,5 +60,5 @@ val client = TlsClient(FakeEngine())
 
 ## See also
 
-- [Architecture](../architecture.md) — Where this fits
-- [TLS Fingerprinting](../tls-fingerprinting.md) — Why a native engine is needed
+- [Architecture](../architecture.md): where this fits
+- [TLS Fingerprinting](../tls-fingerprinting.md): why a native engine is needed
