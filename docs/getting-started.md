@@ -33,6 +33,18 @@ dependencies {
 
 Download the matching zip from [kotlin-tls-client-natives releases](https://github.com/PianoNic/kotlin-tls-client-natives/releases/latest) and unpack the file inside.
 
+**The simple recipe** (works on Linux, macOS, Windows, FreeBSD): make a `natives/` directory at your project root, put the unpacked `.so` / `.dll` / `.dylib` in it, and add this to `build.gradle.kts`:
+
+```kotlin
+tasks.withType<JavaExec> {
+    systemProperty("java.library.path", "${rootDir}/natives")
+}
+```
+
+That's it. `./gradlew run` will now find the native at runtime.
+
+If you'd rather use a different directory, pick anywhere on `java.library.path` (or `LD_LIBRARY_PATH` / `DYLD_LIBRARY_PATH` / `PATH`). The full picker:
+
 | Target | Zip | File inside | Where to put it |
 |---|---|---|---|
 | Linux x86_64 | `linux-x86_64.zip` | `libtls_client_go.so` | a directory on `java.library.path` (or `LD_LIBRARY_PATH`) |
