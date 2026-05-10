@@ -1,100 +1,92 @@
 # Architecture
 
-How the kotlin-tls-client library is structured.
-
-## Overview
+A 30-second overview of how kotlin-tls-client is structured.
 
 ```
 Your application
-       │
-  ┌────┼──────────┐
-  ▼    ▼          ▼
-fetch  Session  TlsClient
-         │          │
-         └────┬─────┘
-              ▼
-         TlsClient
-              │
-       ┌──────┴──────┐
-       ▼             ▼
-   OkHttp       TlsClientEngine
-  (default)     (NativeTlsEngine)
-       │             │
-       ▼             ▼
-   HTTP/HTTPS    Go tls-client
-                 (real JA3)
+       |
+       v
+   fetch() / Session.get/post/...        ← convenience layer
+       |
+       v
+    TlsClient.request(payload)           ← public entrypoint
+       |
+       v
+   TlsClientEngine (interface)            ← port
+       |
+       v
+   NativeTlsEngine                        ← adapter
+       |
+       v
+   GoTlsClient (JNA)                      ← FFI to Go shared lib
+       |
+       v
+   tls_client_go.{so,dll,dylib}           ← bogdanfinn/tls-client
 ```
 
-## Components
-
-### `fetch`
-
-Top-level function. Creates a temporary `Session`, performs one request, closes the session. No state is kept after the call.
-
-### `Client`
-
-Singleton that holds a shared `TlsClient`. Call `Client.init()` once at startup and `Client.destroy()` at shutdown. `fetch` uses it automatically if initialized; `Session` uses it when you pass `Client.getInstance()`.
-
-### `Session`
-
-Holds a `sessionId` and a `SessionOptions` config. Each method call (`get`, `post`, etc.) builds a `RequestPayload` and delegates to `TlsClient.request()`. Cookies are stored per-session by the underlying client. `close()` destroys the session.
-
-### `TlsClient`
-
-Core class. Two modes:
-- **Default (OkHttp):** Uses OkHttp internally. Session state (cookies, connections) stored in a `ConcurrentHashMap` keyed by `sessionId`.
-- **Native engine:** If constructed with `TlsClient(NativeTlsEngine())`, all calls are serialized to JSON and delegated to the Go tls-client via JNA. The Go library handles session state.
-
-### `TlsClientEngine` / `NativeTlsEngine`
-
-`TlsClientEngine` is an interface with four methods: `request`, `destroySession`, `getCookiesFromSession`, `destroyAll`. `NativeTlsEngine` implements it by calling the Go shared library directly via JNA (`GoTlsClient` interface).
-
-### `Response` / `ResponseData`
-
-`ResponseData` is the raw data class (status, body, headers, cookies, target, sessionId, usedProtocol). `Response` wraps it with a Node-compatible interface (`ok`, `text()`, `url`, etc.).
-
-## Data flow
-
-### OkHttp path
+## Package layout
 
 ```
-Session.get(url)
-  → TlsClient.request(RequestPayload)
-    → getOrCreateSession(sessionId)   // creates OkHttpClient + MutableCookieJar
-    → OkHttpClient.newCall(request).execute()
-    → ResponseData(status, body, headers, cookies, ...)
-  → Response(data)
+dev.kotlintls/
+├── TlsClient.kt              ← only entrypoint at the root
+├── models/                   ← public data classes + enums
+│   ├── ClientIdentifier, RequestMethod
+│   ├── RequestPayload, RequestOptions
+│   ├── ResponseData, Cookie
+│   ├── SessionOptions, SessionPayloads
+│   └── CustomTlsClient, TransportOptions, PriorityFrame
+├── session/                  ← high-level session wrapper
+│   ├── Session.kt
+│   └── Response.kt
+├── client/                   ← convenience helpers
+│   ├── Client.kt             (process-wide singleton)
+│   └── Fetch.kt              (one-shot fetch)
+├── engine/                   ← port + native adapter
+│   ├── TlsClientEngine.kt
+│   └── NativeTlsEngine.kt
+└── internal/                 ← impl details (also `internal` keyword)
+    ├── GoTlsClient.kt        (JNA interface)
+    ├── NativeLibLoader.kt    (extracts native lib from JAR)
+    ├── JsonDtos.kt           (wire DTOs for the Go FFI)
+    └── JsonMappers.kt        (public model ↔ wire DTO + Gson)
 ```
 
-### Native engine path
+## Layers
 
-```
-Session.get(url)
-  → TlsClient.request(RequestPayload)
-    → payload.toRequestJson()          // serialize to JSON string
-    → NativeTlsEngine.request(json)
-      → JNA → GoTlsClient.request(json)
-        → Go tls-client performs request with uTLS
-        → returns JSON string
-    → json.parseResponseJson()         // deserialize
-  → Response(data)
-```
+### Entrypoint — `TlsClient`
 
-## Class hierarchy
+A thin façade that takes a `RequestPayload`, serializes it to JSON, hands it to a `TlsClientEngine`, and parses the response. It owns no transport or fingerprinting logic itself — it just orchestrates.
 
-```
-Client (singleton)
-  └── TlsClient
-        ├── MutableCookieJar (per session, OkHttp path)
-        └── TlsClientEngine
-              └── NativeTlsEngine
+### Convenience — `fetch`, `Client`, `Session`
 
-Session (wraps TlsClient + sessionId)
-  └── Response (wraps ResponseData)
+- `fetch(url)` creates a temporary session for one call.
+- `Client` is a process-wide singleton holding a default `TlsClient`.
+- `Session` keeps a `sessionId` and per-session config so the underlying Go library can persist cookies and connection state.
 
-fetch (top-level function, creates a temporary Session)
-```
+### Port — `TlsClientEngine`
 
-## Thread safety
+A four-method interface (`request`, `destroySession`, `getCookiesFromSession`, `destroyAll`) defined entirely in JSON strings. This is the seam: the public API doesn't depend on JNA, Go, or any specific TLS library.
 
-`TlsClient` uses a `ConcurrentHashMap` for session storage and a `synchronized` block for session creation. It is safe to use from multiple threads. `Client` uses double-checked locking. `Session` is not thread-safe — use one session per thread or synchronize externally.
+### Adapter — `NativeTlsEngine`
+
+The only implementation that ships. It loads the Go shared library via `NativeLibLoader` and forwards each call through JNA.
+
+### Internals — `internal/`
+
+- `GoTlsClient` — JNA `Library` interface, four C-string functions.
+- `NativeLibLoader` — extracts the right `.so`/`.dll`/`.dylib` from the JAR per OS+arch, then loads it. On Android it uses `System.loadLibrary` (W^X-safe).
+- `JsonDtos` + `JsonMappers` — anti-corruption layer between Kotlin models and the Go FFI's JSON shape. Gson lives here and nowhere else.
+
+## How a request flows
+
+1. You call `session.get(url)` (or `client.request(payload)` directly).
+2. `Session` builds a `RequestPayload` merging session config and per-request options.
+3. `TlsClient.request` calls `payload.toRequestJson()` (in `internal`) to produce the FFI JSON string.
+4. The string goes to `NativeTlsEngine.request(json)`, which forwards to `GoTlsClient.request(json)` via JNA.
+5. The Go library performs the TLS handshake with the requested fingerprint, sends the request, and returns a JSON response string.
+6. `String.parseResponseJson()` (in `internal`) turns it back into a `ResponseData`.
+7. `Session` wraps it in a `Response` and returns.
+
+## Native libraries
+
+Native libs are not stored in git. The Gradle `downloadNatives` task pulls a versioned bundle from the [PianoNic/tls-client](https://github.com/PianoNic/tls-client) fork (which auto-syncs with upstream `bogdanfinn/tls-client`) and caches it under `build/natives/`. The version is pinned in `natives-version.txt` and bumped automatically by PR when the fork releases.

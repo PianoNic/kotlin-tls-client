@@ -1,144 +1,127 @@
 # Session
 
-High-level wrapper around `TlsClient`. Matches the Node `Session` API.
+Stateful wrapper around [`TlsClient`](./tls-client.md). Holds a `sessionId`, a default `SessionOptions`, and exposes one method per HTTP verb. Cookies persist on the Go side until you call `close()`.
 
-## Constructor
+## Setup
+
+A `Session` needs a `TlsClient`. You can build one yourself or reuse the singleton.
 
 ```kotlin
-val session = Session(
-    tlsClient = TlsClient(),        // or Client.getInstance()
-    config = SessionOptions(        // optional
-        clientIdentifier = ClientIdentifier.CHROME_133,
-        followRedirects = true,
-        timeout = 30_000
-    )
-)
-```
+import dev.kotlintls.client.Client
+import dev.kotlintls.models.ClientIdentifier
+import dev.kotlintls.models.SessionOptions
+import dev.kotlintls.session.Session
 
-`sessionId` is generated automatically unless you set it in `SessionOptions`.
+Client.init()
+val session = Session(Client.getInstance(), SessionOptions(
+    clientIdentifier = ClientIdentifier.CHROME_133,
+    followRedirects = true,
+    timeout = 30_000
+))
+```
 
 ## Methods
 
-### HTTP methods
+### get / post / put / delete / patch / head / options
 
-All methods take a URL and optional `RequestOptions`. They return a `Response`.
-
-```kotlin
-session.get(url, options)
-session.post(url, options)
-session.put(url, options)
-session.delete(url, options)
-session.patch(url, options)
-session.head(url, options)
-session.options(url, options)
-```
-
-**Example:**
+All seven verbs share the same signature: `(url: String, options: RequestOptions = RequestOptions()): Response`.
 
 ```kotlin
-// GET
-val resp = session.get("https://httpbin.org/get")
-println(resp.status)  // 200
-println(resp.ok)      // true
+val r1 = session.get("https://httpbin.org/get")
 
-// POST with body
-val resp = session.post("https://httpbin.org/post", RequestOptions(
-    headers = mapOf("Content-Type" to "application/json"),
-    body = """{"hello":"world"}"""
-))
-
-// With per-request cookies
-val resp = session.get("https://httpbin.org/cookies", RequestOptions(
-    cookies = mapOf("session_id" to "abc123")
+val r2 = session.post("https://httpbin.org/post", RequestOptions(
+    body = """{"key":"value"}""",
+    headers = mapOf("Content-Type" to "application/json")
 ))
 ```
 
-### `close(): DestroySessionResponse`
+### close(): DestroySessionResponse
 
-Destroys the session on the underlying client.
+Destroys the session on the Go side. Call this when you're done.
 
 ```kotlin
 session.close()
 ```
 
-### `cookies(url: String): List<Cookie>`
+### cookies(url: String): List\<Cookie\>
 
-Returns cookies stored for a URL in this session.
+Returns cookies the Go cookie jar holds for the given URL in this session.
 
 ```kotlin
-val cookies = session.cookies("https://httpbin.org")
-cookies.forEach { println("${it.name}=${it.value}") }
+val jar = session.cookies("https://httpbin.org")
+jar.forEach { println("${it.name}=${it.value}") }
 ```
+
+## Properties
+
+- **`sessionId: String`** — The session ID. Auto-generated UUID unless you pass `SessionOptions(sessionId = ...)`.
 
 ## SessionOptions
 
-All fields are optional.
+Frequently used fields:
 
 | Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `sessionId` | `String?` | random UUID | Session identifier |
-| `clientIdentifier` | `ClientIdentifier` | `CHROME_133` | TLS profile |
-| `headers` | `Map<String,String>` | default browser headers | Default headers for all requests |
-| `headerOrder` | `List<String>` | empty | Header order |
-| `followRedirects` | `Boolean` | `false` | Follow HTTP redirects |
-| `insecureSkipVerify` | `Boolean` | `false` | Skip TLS verification |
-| `timeout` | `Int` | `0` (30s) | Timeout in milliseconds |
-| `proxy` | `String?` | none | HTTP proxy URL, e.g. `http://host:8080` |
-| `ja3String` | `String?` | none | Custom JA3 string |
-| `customTlsClient` | `CustomTlsClient?` | none | Full custom TLS config |
+|---|---|---|---|
+| `sessionId` | `String?` | `null` | Provide a fixed ID instead of a random UUID |
+| `clientIdentifier` | `ClientIdentifier` | `CHROME_133` | TLS profile preset |
+| `ja3String` | `String?` | `null` | Custom JA3 string (overrides `clientIdentifier`) |
+| `customTlsClient` | `CustomTlsClient?` | `null` | Full custom TLS config (overrides both above) |
+| `headers` | `Map<String, String>` | `emptyMap()` | Default headers for every request in the session |
+| `headerOrder` | `List<String>` | `emptyList()` | Order of headers on the wire |
+| `proxy` | `String?` | `null` | HTTP proxy URL (`http://user:pass@host:port`) |
+| `followRedirects` | `Boolean` | `false` | Follow 3xx automatically |
+| `timeout` | `Int` | `0` | Total timeout in **milliseconds**; `0` falls back to a 30s default |
+| `insecureSkipVerify` | `Boolean` | `false` | Skip TLS certificate verification |
 | `forceHttp1` | `Boolean` | `false` | Force HTTP/1.1 |
-| `randomTlsExtensionOrder` | `Boolean` | `false` | Randomize TLS extension order |
-| `transportOptions` | `TransportOptions?` | none | Keep-alive, compression, buffer sizes |
-| `disableIPV4` / `disableIPV6` | `Boolean` | `false` | Disable address family |
+| `disableIPV4` / `disableIPV6` | `Boolean` | `false` | DNS family filtering |
+| `serverNameOverwrite` | `String?` | `null` | Custom SNI |
+| `transportOptions` | `TransportOptions?` | `null` | Connection pool tuning |
 
-## RequestOptions
+See [Models](./models.md#sessionoptions) for the complete list.
 
-Per-request options. Override the session-level config.
+## RequestOptions (per-call overrides)
+
+Per-call options override session config:
 
 | Field | Type | Description |
-|-------|------|-------------|
-| `headers` | `Map<String,String>` | Override session headers |
-| `headerOrder` | `List<String>` | Override header order |
+|---|---|---|
+| `headers` | `Map<String, String>` | Replaces session headers for this call |
 | `body` | `String?` | Request body |
-| `cookies` | `Map<String,String>` | Additional cookies to send |
-| `followRedirects` | `Boolean?` | Override session redirect setting |
+| `cookies` | `Map<String, String>` | Cookies to send only with this request |
+| `followRedirects` | `Boolean?` | Override session setting |
 | `proxy` | `String?` | Override session proxy |
-| `byteResponse` | `Boolean` | Request raw bytes |
-| `hostOverride` | `String?` | Override Host header |
-
-## Response
-
-```kotlin
-resp.ok          // Boolean: status in 200..299
-resp.status      // Int: HTTP status code
-resp.body        // String: response body
-resp.text()      // same as body
-resp.headers     // Map<String, List<String>>
-resp.cookies     // Map<String, String>
-resp.url         // String: final URL (after redirects)
-resp.usedProtocol  // "http/1.1" or "h2"
-resp.sessionId   // String?
-```
+| `hostOverride` | `String?` | Override the `Host` header |
+| `byteRequest` / `byteResponse` | `Boolean` | Treat body/response as base64 bytes |
 
 ## Example
 
 ```kotlin
-import dev.kotlintls.*
+import dev.kotlintls.client.Client
+import dev.kotlintls.models.ClientIdentifier
+import dev.kotlintls.models.RequestOptions
+import dev.kotlintls.models.SessionOptions
+import dev.kotlintls.session.Session
 
 fun main() {
     Client.init()
+
     val session = Session(Client.getInstance(), SessionOptions(
-        clientIdentifier = ClientIdentifier.CHROME_133,
+        clientIdentifier = ClientIdentifier.FIREFOX_135,
         followRedirects = true,
-        timeout = 30_000
+        timeout = 15_000
     ))
 
-    // Make requests; cookies are kept between calls
-    session.get("https://httpbin.org/cookies/set/token/abc")
-    val resp = session.get("https://httpbin.org/cookies")
-    println(resp.body)  // shows {"cookies": {"token": "abc"}}
+    // Login
+    session.post("https://example.com/login", RequestOptions(
+        body = "user=alice&pass=secret",
+        headers = mapOf("Content-Type" to "application/x-www-form-urlencoded")
+    ))
 
-    println(session.cookies("https://httpbin.org"))
+    // Authenticated call — cookies from /login are reused automatically
+    val resp = session.get("https://example.com/account")
+    println(resp.status)
+    println(resp.body)
+
     session.close()
     Client.destroy()
 }
@@ -146,6 +129,6 @@ fun main() {
 
 ## See also
 
-- [fetch](./fetch.md) – One-shot request without managing sessions
-- [TlsClient](./tls-client.md) – Low-level API
-- [Types](./types.md) – All types
+- [TlsClient](./tls-client.md) — The underlying client
+- [fetch](./fetch.md) — One-shot version when you don't need a session
+- [Models](./models.md) — `SessionOptions`, `RequestOptions`, `Response`, `Cookie`

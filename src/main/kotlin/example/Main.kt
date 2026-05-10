@@ -9,7 +9,7 @@ import dev.kotlintls.models.SessionOptions
 import dev.kotlintls.session.Session
 
 /**
- * Example matching Go tls-client and Node node-tls-client usage.
+ * Example showing the three usage styles: fetch, Session, and direct TlsClient.
  */
 fun main() {
     // 1) One-shot fetch (no init)
@@ -17,7 +17,7 @@ fun main() {
     println("fetch status: ${response.status}, ok: ${response.ok}")
     println("body: ${response.body.take(200)}...")
 
-    // 2) Session-based (like Node Session)
+    // 2) Session-based
     Client.init()
     val session = Session(Client.getInstance(), SessionOptions(
         clientIdentifier = ClientIdentifier.CHROME_131,

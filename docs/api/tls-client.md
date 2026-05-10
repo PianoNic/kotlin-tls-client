@@ -1,85 +1,101 @@
 # TlsClient
 
-The core class. Matches the Go `request` / `destroySession` / `getCookiesFromSession` / `destroyAll` FFI API.
+The low-level entrypoint. Sends a `RequestPayload` through a `TlsClientEngine` and returns a `ResponseData`. Most users go through [`Session`](./session.md) or [`fetch`](./fetch.md) instead — use `TlsClient` directly when you need full control over the payload.
 
-## Constructor
+## Setup
+
+The default constructor uses [`NativeTlsEngine`](./native-engine.md), which loads the bundled Go TLS library via JNA.
 
 ```kotlin
-// Default: uses OkHttp (no browser fingerprint)
-val client = TlsClient()
+import dev.kotlintls.TlsClient
 
-// With native engine: uses Go tls-client (real browser fingerprint)
-val client = TlsClient(NativeTlsEngine())
+val client = TlsClient()
+```
+
+You can pass a custom engine for tests or alternative transports:
+
+```kotlin
+import dev.kotlintls.engine.TlsClientEngine
+
+class FakeEngine : TlsClientEngine { /* ... */ }
+val client = TlsClient(FakeEngine())
 ```
 
 ## Methods
 
-### `request(payload: RequestPayload): ResponseData`
+### request(payload: RequestPayload): ResponseData
 
-Performs an HTTP request.
+Sends a request and returns the parsed response. Not a suspend function.
 
 ```kotlin
+import dev.kotlintls.models.RequestMethod
+import dev.kotlintls.models.RequestPayload
+
 val data = client.request(RequestPayload(
     requestUrl = "https://httpbin.org/get",
-    requestMethod = RequestMethod.GET,
-    sessionId = "my-session",
-    tlsClientIdentifier = ClientIdentifier.CHROME_133.value,
-    headers = mapOf("Accept" to "application/json"),
-    followRedirects = true,
-    timeoutSeconds = 30
+    requestMethod = RequestMethod.GET
 ))
-println(data.status)   // 200
+println(data.status)
 println(data.body)
-println(data.ok)       // true
 ```
 
-### `destroySession(payload: DestroySessionPayload): DestroySessionResponse`
+### destroySession(payload: DestroySessionPayload): DestroySessionResponse
 
-Removes a session and closes its connections.
+Destroys a session on the Go-side cookie jar.
 
 ```kotlin
-val result = client.destroySession(DestroySessionPayload("my-session"))
-println(result.success)  // true
+import dev.kotlintls.models.DestroySessionPayload
+
+client.destroySession(DestroySessionPayload(sessionId = "my-session"))
 ```
 
-### `getCookiesFromSession(payload: GetCookiesFromSessionPayload): GetCookiesFromSessionResponse`
+### getCookiesFromSession(payload: GetCookiesFromSessionPayload): GetCookiesFromSessionResponse
 
-Returns all cookies stored for a URL in a given session.
+Returns cookies the Go cookie jar holds for a given URL in a session.
 
 ```kotlin
+import dev.kotlintls.models.GetCookiesFromSessionPayload
+
 val result = client.getCookiesFromSession(
-    GetCookiesFromSessionPayload("my-session", "https://httpbin.org")
+    GetCookiesFromSessionPayload(sessionId = "my-session", url = "https://example.com")
 )
 result.cookies.forEach { println("${it.name}=${it.value}") }
 ```
 
-### `destroyAll(): DestroySessionResponse`
+### destroyAll(): DestroySessionResponse
 
-Destroys all sessions.
+Destroys every session in the Go cookie jar. Call this on shutdown if you don't track session IDs yourself.
 
 ```kotlin
 client.destroyAll()
 ```
 
-## Session lifecycle
-
-Sessions are created automatically on the first request that includes a `sessionId`. They persist until you call `destroySession` or `destroyAll`.
+## Example
 
 ```kotlin
-// First request: creates session "s1"
-client.request(RequestPayload(requestUrl = "https://example.com", sessionId = "s1"))
+import dev.kotlintls.TlsClient
+import dev.kotlintls.models.ClientIdentifier
+import dev.kotlintls.models.DestroySessionPayload
+import dev.kotlintls.models.RequestMethod
+import dev.kotlintls.models.RequestPayload
 
-// Second request: reuses session "s1" (same cookies, same connection pool)
-client.request(RequestPayload(requestUrl = "https://example.com/page2", sessionId = "s1"))
-
-// Done: clean up
-client.destroySession(DestroySessionPayload("s1"))
+fun main() {
+    val client = TlsClient()
+    val data = client.request(RequestPayload(
+        requestUrl = "https://httpbin.org/post",
+        requestMethod = RequestMethod.POST,
+        requestBody = """{"hello":"world"}""",
+        tlsClientIdentifier = ClientIdentifier.CHROME_133.value,
+        sessionId = "demo",
+        headers = mapOf("Content-Type" to "application/json")
+    ))
+    println(data.status)
+    client.destroySession(DestroySessionPayload("demo"))
+}
 ```
-
-If no `sessionId` is set, a random one is created and destroyed after the request.
 
 ## See also
 
-- [Session](./session.md) – Higher-level wrapper around TlsClient
-- [Types](./types.md) – RequestPayload, ResponseData, and all other types
-- [NativeTlsEngine](./native-engine.md) – Real browser fingerprint
+- [Session](./session.md) — Higher-level wrapper for repeated requests
+- [Models](./models.md) — `RequestPayload`, `ResponseData`, and friends
+- [NativeTlsEngine](./native-engine.md) — The default transport

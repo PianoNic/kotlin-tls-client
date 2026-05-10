@@ -1,13 +1,18 @@
 # Getting Started
 
-## Prerequisites
+Install kotlin-tls-client, make your first request, and pick a browser TLS profile.
 
-- **Kotlin 1.9+** / **JVM 21+**
-- No other setup needed — native libraries are bundled in the JAR
+## Requirements
 
-## Installation
+- Kotlin 1.9 or newer
+- JDK 21 or newer
+- Gradle 8.x
 
-**Step 1** — Add JitPack to your repositories:
+## Install
+
+### Gradle (Kotlin DSL)
+
+Add JitPack to your repositories and the dependency to your build:
 
 ```kotlin
 // settings.gradle.kts
@@ -17,86 +22,116 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
 }
-```
 
-**Step 2** — Add the dependency:
-
-```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("com.github.PianoNic:kotlin-tls-client:v1.0.1")
+    implementation("com.github.PianoNic:kotlin-tls-client:v1.0.0")
 }
 ```
 
-## Basic usage
+### Build from source
 
-### Simplest: one-shot fetch
+```bash
+git clone https://github.com/PianoNic/kotlin-tls-client.git
+cd kotlin-tls-client
+./gradlew build
+./gradlew publishToMavenLocal
+```
+
+The `downloadNatives` Gradle task fetches the Go native libraries on first build and caches them under `build/natives/`.
+
+## Make your first request
+
+The simplest way is `fetch`. It creates a temporary session, performs one request, and closes the session.
 
 ```kotlin
-import dev.kotlintls.*
+import dev.kotlintls.client.fetch
+import dev.kotlintls.models.RequestMethod
 
 fun main() {
-    val resp = fetch("https://httpbin.org/get")
-    println(resp.status)   // 200
-    println(resp.body)
+    val response = fetch("https://httpbin.org/get", RequestMethod.GET)
+    println("status: ${response.status}")
+    println("body:   ${response.body.take(200)}")
 }
 ```
 
-### Session: reuse cookies across requests
+`fetch` lazily creates a `TlsClient` for you. If you call `Client.init()` first, it will reuse the shared client instead.
+
+## Pick a TLS profile
+
+The client identifier controls the TLS handshake fingerprint (JA3) and the order of headers your client sends. The default is Chrome 133.
 
 ```kotlin
-import dev.kotlintls.*
+import dev.kotlintls.client.Client
+import dev.kotlintls.models.ClientIdentifier
+import dev.kotlintls.models.SessionOptions
+import dev.kotlintls.session.Session
 
 fun main() {
     Client.init()
+
     val session = Session(Client.getInstance(), SessionOptions(
-        clientIdentifier = ClientIdentifier.CHROME_133,
-        followRedirects = true
+        clientIdentifier = ClientIdentifier.FIREFOX_135,
+        followRedirects = true,
+        timeout = 30_000
     ))
 
-    val resp = session.get("https://httpbin.org/get")
+    val resp = session.get("https://tls.peet.ws/api/all")
     println(resp.status)
+    println(resp.body)
 
     session.close()
     Client.destroy()
 }
 ```
 
-### POST with body
+Common profiles: `CHROME_133`, `CHROME_146`, `FIREFOX_135`, `FIREFOX_147`, `SAFARI_IOS_18_0`, `OPERA_91`. See [`ClientIdentifier`](../src/main/kotlin/dev/kotlintls/models/ClientIdentifier.kt) for the full list (~70 profiles).
+
+If you want to understand *why* this matters and what JA3 actually is, read [TLS Fingerprinting](./tls-fingerprinting.md).
+
+## Use a custom JA3
+
+Pass a JA3 string instead of a preset:
 
 ```kotlin
-val resp = session.post("https://httpbin.org/post", RequestOptions(
-    headers = mapOf("Content-Type" to "application/json"),
-    body = """{"key":"value"}"""
+val session = Session(Client.getInstance(), SessionOptions(
+    ja3String = "771,4865-4866-4867,0-23-65281-10-11-35-16-5-13,29-23-24,0"
 ))
-println(resp.status)
 ```
 
-### Real browser fingerprint (NativeTlsEngine)
-
-The native libraries are already bundled in the JAR — no manual setup needed.
+## Send a POST with a body and headers
 
 ```kotlin
-val client = TlsClient(NativeTlsEngine())
-val session = Session(client, SessionOptions(
-    clientIdentifier = ClientIdentifier.CHROME_133
+import dev.kotlintls.client.Client
+import dev.kotlintls.models.RequestOptions
+import dev.kotlintls.session.Session
+
+Client.init()
+val session = Session(Client.getInstance())
+
+val resp = session.post("https://httpbin.org/post", RequestOptions(
+    body = """{"hello":"world"}""",
+    headers = mapOf("Content-Type" to "application/json")
 ))
-val resp = session.get("https://example.com")
+
+println(resp.status)
+println(session.cookies("https://httpbin.org"))
+
+session.close()
+Client.destroy()
+```
+
+## Use a proxy
+
+```kotlin
+val session = Session(Client.getInstance(), SessionOptions(
+    proxy = "http://user:pass@proxy.example.com:8080"
+))
 ```
 
 ## Next steps
 
-- [Session API](./api/session.md) – All session methods and options
-- [Types](./api/types.md) – Full list of request/response types
-- [TLS Fingerprinting](./TLS_FINGERPRINTING.md) – How browser fingerprinting works
-
-## Troubleshooting
-
-**`UnsatisfiedLinkError`**
-Your platform may not have a bundled native library yet. Check the [supported platforms](./api/native-engine.md#supported-platforms) list.
-
-**`IllegalStateException: Client not initialized`**
-You called `Client.getInstance()` without calling `Client.init()` first.
-
-**Connection timeout**
-Increase `timeout` in `SessionOptions` (value is in milliseconds: `timeout = 60_000`).
+- [TLS Fingerprinting](./tls-fingerprinting.md) — Why this library exists; what JA3 is
+- [Session API](./api/session.md) — All session methods and options
+- [TlsClient API](./api/tls-client.md) — Low-level request payloads
+- [Architecture](./architecture.md) — How the library is organized
