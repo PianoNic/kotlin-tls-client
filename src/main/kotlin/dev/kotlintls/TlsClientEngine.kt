@@ -1,12 +1,12 @@
 package dev.kotlintls
 
 /**
- * Engine that performs the actual HTTP request with optional TLS fingerprinting.
- * - [OkHttpTlsEngine]: default, uses OkHttp (no JA3 mimicry).
- * - [NativeTlsEngine]: delegates to Go tls-client .so via JNI (real JA3 when the native lib is present).
+ * Engine that performs the actual HTTP request with TLS fingerprinting.
+ * Default implementation: [NativeTlsEngine], which calls the Go tls-client shared library via JNA.
+ *
+ * Input and output are JSON strings matching the Go tls-client FFI.
  */
 interface TlsClientEngine {
-    /** Performs request; input and output are JSON strings matching Go tls-client FFI. */
     fun request(requestJson: String): String
     fun destroySession(payloadJson: String): String
     fun getCookiesFromSession(payloadJson: String): String
