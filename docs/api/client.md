@@ -1,6 +1,6 @@
 # Client
 
-Process-wide singleton holding a default [`TlsClient`](./tls-client.md). Optional — useful when many call sites share the same engine and you want to avoid passing it around.
+Process-wide singleton holding a default [`TlsClient`](./tls-client.md). Optional, useful when many call sites share the same engine and you want to avoid passing it around.
 
 ## Methods
 
@@ -63,4 +63,4 @@ fun main() {
 ## See also
 
 - [TlsClient](./tls-client.md)
-- [fetch](./fetch.md) — Auto-uses the singleton when initialized
+- [fetch](./fetch.md): auto-uses the singleton when initialized

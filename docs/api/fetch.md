@@ -67,5 +67,5 @@ val resp = fetch(
 
 ## See also
 
-- [Session](./session.md) — Stateful version
-- [Client](./client.md) — Optional shared singleton
+- [Session](./session.md): stateful version
+- [Client](./client.md): optional shared singleton

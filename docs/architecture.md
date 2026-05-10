@@ -46,36 +46,36 @@ dev.kotlintls/
 │   └── NativeTlsEngine.kt
 └── internal/                 ← impl details (also `internal` keyword)
     ├── GoTlsClient.kt        (JNA interface)
-    ├── NativeLibLoader.kt    (extracts native lib from JAR)
+    ├── NativeLibLoader.kt    (locates and loads the native lib at runtime)
     ├── JsonDtos.kt           (wire DTOs for the Go FFI)
     └── JsonMappers.kt        (public model ↔ wire DTO + Gson)
 ```
 
 ## Layers
 
-### Entrypoint — `TlsClient`
+### Entrypoint, `TlsClient`
 
-A thin façade that takes a `RequestPayload`, serializes it to JSON, hands it to a `TlsClientEngine`, and parses the response. It owns no transport or fingerprinting logic itself — it just orchestrates.
+A thin façade that takes a `RequestPayload`, serializes it to JSON, hands it to a `TlsClientEngine`, and parses the response. It owns no transport or fingerprinting logic itself, it just orchestrates.
 
-### Convenience — `fetch`, `Client`, `Session`
+### Convenience, `fetch`, `Client`, `Session`
 
 - `fetch(url)` creates a temporary session for one call.
 - `Client` is a process-wide singleton holding a default `TlsClient`.
 - `Session` keeps a `sessionId` and per-session config so the underlying Go library can persist cookies and connection state.
 
-### Port — `TlsClientEngine`
+### Port, `TlsClientEngine`
 
 A four-method interface (`request`, `destroySession`, `getCookiesFromSession`, `destroyAll`) defined entirely in JSON strings. This is the seam: the public API doesn't depend on JNA, Go, or any specific TLS library.
 
-### Adapter — `NativeTlsEngine`
+### Adapter, `NativeTlsEngine`
 
 The only implementation that ships. It loads the Go shared library via `NativeLibLoader` and forwards each call through JNA.
 
-### Internals — `internal/`
+### Internals, `internal/`
 
-- `GoTlsClient` — JNA `Library` interface, four C-string functions.
-- `NativeLibLoader` — extracts the right `.so`/`.dll`/`.dylib` from the JAR per OS+arch, then loads it. On Android it uses `System.loadLibrary` (W^X-safe).
-- `JsonDtos` + `JsonMappers` — anti-corruption layer between Kotlin models and the Go FFI's JSON shape. Gson lives here and nowhere else.
+- `GoTlsClient`, JNA `Library` interface, four C-string functions.
+- `NativeLibLoader`: detects OS+arch, then asks JNA to load the matching shared library by name. The library is **not** bundled in the JAR. Users place the `.so`/`.dll`/`.dylib` for their platform on `java.library.path` (or `jniLibs/<abi>/` on Android) and JNA's standard search resolves it.
+- `JsonDtos` + `JsonMappers`, anti-corruption layer between Kotlin models and the Go FFI's JSON shape. Gson lives here and nowhere else.
 
 ## How a request flows
 
