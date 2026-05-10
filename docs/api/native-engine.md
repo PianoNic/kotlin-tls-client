@@ -35,7 +35,7 @@ On Android, `System.loadLibrary("tls_client_go")` is used instead, because Andro
 
 ## Build and versioning
 
-The native libraries aren't stored in git. The Gradle `downloadNatives` task fetches a versioned bundle on first build. The version is pinned in `natives-version.txt` and bumped automatically when the [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client) fork releases (the fork auto-syncs with upstream `bogdanfinn/tls-client`).
+The native libraries aren't stored in git. The Gradle `downloadNatives` task fetches a versioned bundle on first build. The version is pinned in `natives-version.txt` and bumped automatically when the [`PianoNic/kotlin-tls-client-natives`](https://github.com/PianoNic/kotlin-tls-client-natives) fork releases (the fork auto-syncs with upstream `bogdanfinn/tls-client`).
 
 ## Implementing a different engine
 

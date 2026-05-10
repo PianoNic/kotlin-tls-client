@@ -42,7 +42,7 @@ This library wraps [bogdanfinn/tls-client](https://github.com/bogdanfinn/tls-cli
 ### Native libraries
 
 - **Not stored in git** — downloaded at build time by Gradle `downloadNatives` task
-- Built via fork [`PianoNic/tls-client`](https://github.com/PianoNic/tls-client) (auto-syncs with upstream bogdanfinn/tls-client)
+- Built via fork [`PianoNic/kotlin-tls-client-natives`](https://github.com/PianoNic/kotlin-tls-client-natives) (auto-syncs with upstream bogdanfinn/tls-client)
 - Version pinned in `natives-version.txt`, bumped automatically via PR when fork releases a new version
 - Cached in `build/natives/` — only downloads once until `./gradlew clean`
 

@@ -89,4 +89,4 @@ The only implementation that ships. It loads the Go shared library via `NativeLi
 
 ## Native libraries
 
-Native libs are not stored in git. The Gradle `downloadNatives` task pulls a versioned bundle from the [PianoNic/tls-client](https://github.com/PianoNic/tls-client) fork (which auto-syncs with upstream `bogdanfinn/tls-client`) and caches it under `build/natives/`. The version is pinned in `natives-version.txt` and bumped automatically by PR when the fork releases.
+Native libs are not stored in git. The Gradle `downloadNatives` task pulls a versioned bundle from the [PianoNic/kotlin-tls-client-natives](https://github.com/PianoNic/kotlin-tls-client-natives) fork (which auto-syncs with upstream `bogdanfinn/tls-client`) and caches it under `build/natives/`. The version is pinned in `natives-version.txt` and bumped automatically by PR when the fork releases.

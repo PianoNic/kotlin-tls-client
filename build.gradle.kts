@@ -36,12 +36,12 @@ val platforms = listOf(
 )
 
 val downloadNatives by tasks.registering {
-    description = "Download native Go libraries from PianoNic/tls-client releases"
+    description = "Download native Go libraries from PianoNic/kotlin-tls-client-natives releases"
     val outDir = nativesDir
     outputs.dir(outDir)
 
     doLast {
-        val base = "https://github.com/PianoNic/tls-client/releases/download/v$nativesVersion"
+        val base = "https://github.com/PianoNic/kotlin-tls-client-natives/releases/download/v$nativesVersion"
         val tmpDir = temporaryDir
 
         platforms.forEach { platform ->
