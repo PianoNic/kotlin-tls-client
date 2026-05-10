@@ -1,5 +1,6 @@
-package dev.kotlintls
+package dev.kotlintls.client
 
+import dev.kotlintls.TlsClient
 import dev.kotlintls.engine.NativeTlsEngine
 
 /**

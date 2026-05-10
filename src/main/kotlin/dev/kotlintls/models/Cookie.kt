@@ -1,4 +1,4 @@
-package dev.kotlintls
+package dev.kotlintls.models
 
 data class Cookie(
     val name: String,

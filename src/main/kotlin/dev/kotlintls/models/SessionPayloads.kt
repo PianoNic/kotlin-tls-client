@@ -1,4 +1,4 @@
-package dev.kotlintls
+package dev.kotlintls.models
 
 data class DestroySessionPayload(val sessionId: String)
 data class DestroySessionResponse(val id: String, val success: Boolean)
