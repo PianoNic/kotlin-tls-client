@@ -11,7 +11,7 @@ A Kotlin HTTP client with browser TLS fingerprint impersonation. Wraps the Go [t
 - One-shot `fetch(url)` helper
 - HTTP/HTTPS proxy, header order, timeouts, redirects
 - Custom JA3 string support
-- Native Go library bundled in the JAR, no manual setup
+- Slim JAR (~95 KB). Native binary published separately and dropped in by you for your target platform
 - Works on JVM (Linux, macOS, Windows, FreeBSD) and Android
 
 ## Installation
