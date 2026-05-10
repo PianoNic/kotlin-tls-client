@@ -25,12 +25,27 @@ class OkHttpNegativeFingerprintTest {
     private val fpUrl = "https://tls.peet.ws/api/all"
 
     private fun probeWithOkHttp(): JsonObject {
-        val client = OkHttpClient.Builder().build()
+        // Generous timeouts + retry-with-backoff because tls.peet.ws can be slow.
+        // The build went red on main once because OkHttp's default 10s read timeout fired.
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
         val req = Request.Builder().url(fpUrl).build()
-        client.newCall(req).execute().use { resp ->
-            val body = resp.body?.string() ?: error("No body")
-            return JsonParser.parseString(body).asJsonObject
+        var lastError: Throwable? = null
+        for (attempt in 1..3) {
+            try {
+                client.newCall(req).execute().use { resp ->
+                    val body = resp.body?.string() ?: error("No body")
+                    return JsonParser.parseString(body).asJsonObject
+                }
+            } catch (t: Throwable) {
+                lastError = t
+                if (attempt < 3) Thread.sleep(2000L * attempt)
+            }
         }
+        throw lastError ?: error("probeWithOkHttp failed without an error")
     }
 
     private fun JsonObject.tls(): JsonObject = getAsJsonObject("tls")
