@@ -28,10 +28,11 @@ On Android, `System.loadLibrary("tls_client_go")` is used instead, because Andro
 
 | OS | Architectures |
 |---|---|
-| Linux | `x86_64`, `aarch64` |
-| macOS | `x86_64`, `arm64` |
-| Windows | `x86_64` |
-| Android | `arm64-v8a`, `armeabi-v7a` |
+| Android | `arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64` |
+| Windows | `x86_64`, `arm64` |
+| Linux | `x86_64`, `aarch64`, `arm` (32-bit) |
+| macOS | `arm64`, `x86_64` |
+| FreeBSD | `x86_64` |
 
 ## Build and versioning
 

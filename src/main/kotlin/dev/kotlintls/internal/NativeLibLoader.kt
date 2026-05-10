@@ -50,18 +50,24 @@ internal object NativeLibLoader {
         val isAndroid = try { Class.forName("android.os.Build"); true } catch (_: ClassNotFoundException) { false }
 
         return when {
-            isAndroid && arch == "aarch64"             -> Platform("arm64-v8a", "so")
-            isAndroid && arch in ARM32                  -> Platform("armeabi-v7a", "so")
-            os.contains("linux") && isAmd64(arch)      -> Platform("linux-x86_64", "so")
-            os.contains("linux") && arch == "aarch64"  -> Platform("linux-aarch64", "so")
-            os.contains("mac") && arch == "aarch64"    -> Platform("macos-arm64", "dylib")
-            os.contains("mac") && isAmd64(arch)        -> Platform("macos-x86_64", "dylib")
-            os.contains("windows") && isAmd64(arch)    -> Platform("windows-x86_64", "dll")
+            isAndroid && arch == "aarch64"              -> Platform("android-arm64-v8a", "so")
+            isAndroid && arch in ARM32                   -> Platform("android-armeabi-v7a", "so")
+            isAndroid && arch in X86_32                  -> Platform("android-x86", "so")
+            isAndroid && isAmd64(arch)                   -> Platform("android-x86_64", "so")
+            os.contains("linux") && isAmd64(arch)       -> Platform("linux-x86_64", "so")
+            os.contains("linux") && arch == "aarch64"   -> Platform("linux-aarch64", "so")
+            os.contains("linux") && arch in ARM32        -> Platform("linux-arm", "so")
+            os.contains("mac") && arch == "aarch64"     -> Platform("macos-arm64", "dylib")
+            os.contains("mac") && isAmd64(arch)         -> Platform("macos-x86_64", "dylib")
+            os.contains("windows") && isAmd64(arch)     -> Platform("windows-x86_64", "dll")
+            os.contains("windows") && arch == "aarch64" -> Platform("windows-arm64", "dll")
+            os.contains("freebsd") && isAmd64(arch)     -> Platform("freebsd-x86_64", "so")
             else -> null
         }
     }
 
     private val ARM32 = setOf("arm", "armv7l")
+    private val X86_32 = setOf("x86", "i386", "i686")
     private fun isAmd64(arch: String) = arch == "amd64" || arch == "x86_64"
 
     private fun extract(resourcePath: String, libName: String, ext: String): String? {
