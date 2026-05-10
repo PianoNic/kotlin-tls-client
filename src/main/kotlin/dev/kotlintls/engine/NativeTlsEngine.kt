@@ -20,4 +20,14 @@ class NativeTlsEngine : TlsClientEngine {
     override fun destroySession(payloadJson: String): String = lib.destroySession(payloadJson)
     override fun getCookiesFromSession(payloadJson: String): String = lib.getCookiesFromSession(payloadJson)
     override fun destroyAll(): String = lib.destroyAll()
+
+    override fun wsOpen(payloadJson: String): String = lib.wsOpen(payloadJson)
+
+    override fun wsSend(connId: String, message: String, isBinary: Boolean): String =
+        lib.wsSend(connId, message, if (isBinary) 1 else 0)
+
+    override fun wsRecv(connId: String, timeoutMs: Int): String = lib.wsRecv(connId, timeoutMs)
+
+    override fun wsClose(connId: String, code: Int, reason: String): String =
+        lib.wsClose(connId, code, reason)
 }
