@@ -81,6 +81,97 @@ class TlsFingerprintTest {
     }
 
     @Test
+    fun `chrome first cipher is GREASE`() {
+        val fp = probe(ClientIdentifier.CHROME_133)
+        val first = fp.tls().getAsJsonArray("ciphers").first().asString
+        assertTrue(
+            cipherIsGrease(first),
+            "Chromium injects GREASE as the FIRST cipher, not somewhere later. " +
+                "First cipher was '$first'. A non-GREASE-first list reveals an impersonator that " +
+                "added GREASE somewhere but not in the right position."
+        )
+    }
+
+    @Test
+    fun `chrome akamai HTTP2 fingerprint matches expected string`() {
+        val fp = probe(ClientIdentifier.CHROME_133)
+        val http2 = fp.http2OrNull() ?: fail("HTTP/2 missing")
+        val akamai = http2.get("akamai_fingerprint").asString
+        // Format: SETTINGS|WINDOW_UPDATE|PRIORITY|HEADERS_ORDER
+        // Anti-bot vendors (Akamai, Cloudflare) pin this exact string per browser version.
+        // Updating the upstream tls-client Chrome profile may rotate it; that's a real change worth seeing.
+        val expected = "1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p"
+        assertEquals(
+            expected, akamai,
+            "Chrome 133 must produce the canonical Akamai HTTP/2 fingerprint. " +
+                "If this changed, either upstream tls-client updated the profile (then update the " +
+                "expected string) or the engine drifted (then investigate)."
+        )
+    }
+
+    @Test
+    fun `chrome advertises encrypted client hello extension`() {
+        val fp = probe(ClientIdentifier.CHROME_133)
+        val extensions = fp.tls().getAsJsonArray("extensions").map { it.asJsonObject.get("name").asString }
+        // Extension 65037: encrypted_client_hello / GREASE-ECH. Chrome 117+ always advertises.
+        assertTrue(
+            extensions.any { it.contains("65037") },
+            "Chrome 117+ always emits the encrypted_client_hello (65037) extension. " +
+                "Absent here means the profile is missing GREASE-ECH. Got: $extensions"
+        )
+    }
+
+    @Test
+    fun `chrome advertises ALPS extension with h2`() {
+        val fp = probe(ClientIdentifier.CHROME_133)
+        val extensions = fp.tls().getAsJsonArray("extensions").map { it.asJsonObject }
+        // ALPS extension was renumbered from 17513 to 17613 — Chrome 133 uses 17613.
+        val alps = extensions.firstOrNull { it.get("name").asString.contains("17613") }
+            ?: fail("Chrome must send application_settings (17613). Extensions: ${extensions.map { it.get("name").asString }}")
+        val protocols = alps.getAsJsonArray("protocols")?.map { it.asString }
+            ?: fail("ALPS extension must list protocols")
+        assertTrue(
+            protocols.contains("h2"),
+            "ALPS protocols must include 'h2' for HTTP/2 over TLS. Got: $protocols"
+        )
+    }
+
+    @Test
+    fun `chrome compress_certificate uses brotli`() {
+        val fp = probe(ClientIdentifier.CHROME_133)
+        val extensions = fp.tls().getAsJsonArray("extensions").map { it.asJsonObject }
+        val compress = extensions.firstOrNull { it.get("name").asString.startsWith("compress_certificate") }
+            ?: fail("Chrome must send compress_certificate (27) extension")
+        val algorithms = compress.getAsJsonArray("algorithms").map { it.asString }
+        assertTrue(
+            algorithms.any { it.startsWith("brotli", ignoreCase = true) },
+            "Chrome lists brotli (2) as the only certificate-compression algorithm. " +
+                "Firefox lists three; JDK lists none. Got: $algorithms"
+        )
+    }
+
+    @Test
+    fun `chrome supported_groups lists X25519MLKEM768 before X25519`() {
+        val fp = probe(ClientIdentifier.CHROME_133)
+        val extensions = fp.tls().getAsJsonArray("extensions").map { it.asJsonObject }
+        val groupsExt = extensions.firstOrNull { it.get("name").asString.startsWith("supported_groups") }
+            ?: fail("Chrome must send supported_groups extension")
+        val groups = groupsExt.getAsJsonArray("supported_groups").map { it.asString }
+
+        val pqIndex = groups.indexOfFirst { it.contains("X25519MLKEM768") }
+        val x25519Index = groups.indexOfFirst { it.contains("X25519 ") || it == "X25519" }
+
+        assertTrue(pqIndex >= 0, "Chrome 131+ must advertise post-quantum X25519MLKEM768. Got: $groups")
+        assertTrue(x25519Index >= 0, "Chrome must still advertise classical X25519. Got: $groups")
+        assertTrue(
+            pqIndex < x25519Index,
+            "Chrome lists post-quantum X25519MLKEM768 BEFORE classical X25519. " +
+                "Order matters: it's how the server knows to attempt PQ key agreement first. " +
+                "Got order: $groups"
+        )
+    }
+
+    @Test
     fun `chrome JA4 indicates TLS 1_3 and HTTP2`() {
         val fp = probe(ClientIdentifier.CHROME_133)
         val ja4 = fp.tls().get("ja4").asString
