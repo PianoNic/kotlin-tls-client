@@ -22,7 +22,7 @@ jobs:
     # API-compatible port of httpbin.
     services:
       httpbin:
-        image: ghcr.io/mccutchen/go-httpbin:v2.23.1
+        image: ghcr.io/mccutchen/go-httpbin:2.23.1
         ports:
           - 8080:8080
     env:
