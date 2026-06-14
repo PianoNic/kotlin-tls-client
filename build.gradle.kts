@@ -29,7 +29,7 @@ kotlin {
     jvmToolchain(21)
 }
 
-// ── Download native libraries from fork releases ────────────────────────────
+// ── Download native libraries from fork releases ────────────────────────
 
 val platforms = listOf(
     "android-arm64-v8a", "android-armeabi-v7a", "android-x86", "android-x86_64",
@@ -82,7 +82,7 @@ val downloadNatives by tasks.registering {
     }
 }
 
-// ── Tests & packaging ───────────────────────────────────────────────────────
+// ── Tests & packaging ──────────────────────────────────────────
 
 // Native libraries are NOT bundled into the published JAR. Users download the
 // binary for their target platform from kotlin-tls-client-natives releases and
@@ -93,6 +93,9 @@ tasks.test {
     useJUnitPlatform()
     dependsOn(downloadNatives)
     classpath += files(nativesDir)
+    // Let CI (or a developer) redirect the httpbin-style tests at an
+    // alternative/self-hosted instance via HTTPBIN_BASE_URL.
+    System.getenv("HTTPBIN_BASE_URL")?.let { systemProperty("httpbin.baseUrl", it) }
 }
 
 java {

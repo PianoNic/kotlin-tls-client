@@ -7,13 +7,31 @@ import dev.kotlintls.models.RequestMethod
 import dev.kotlintls.models.RequestPayload
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 
 class TlsClientTest {
 
     private val client = TlsClient()
 
-    // ── Basic API ────────────────────────────────────────────────────────────
+    companion object {
+        // httpbin.org is frequently rate-limited or down (503s), which made
+        // these tests flaky in CI. Default to go-httpbin's public instance,
+        // which is API-compatible and more reliable, and allow overriding the
+        // host via the httpbin.baseUrl system property or HTTPBIN_BASE_URL env
+        // var so CI can point at a self-hosted go-httpbin service container.
+        private val BASE: String = (System.getProperty("httpbin.baseUrl")
+            ?: System.getenv("HTTPBIN_BASE_URL")
+            ?: "https://httpbingo.org").trimEnd('/')
+
+        // go-httpbin returns header (and cookie) values as arrays of strings,
+        // whereas the original httpbin returns plain strings. Accept both so
+        // the assertions pass regardless of which instance BASE points at.
+        private fun firstString(element: JsonElement): String =
+            if (element.isJsonArray) element.asJsonArray[0].asString else element.asString
+    }
+
+    // ── Basic API ───────────────────────────────────────────────
 
     @Test
     fun `destroySession returns success`() {
@@ -41,11 +59,11 @@ class TlsClientTest {
         assertNull(ClientIdentifier.fromString("unknown"))
     }
 
-    // ── HTTP requests ────────────────────────────────────────────────────────
+    // ── HTTP requests ───────────────────────────────────────────
 
     @Test
     fun `GET httpbin returns 200`() {
-        val resp = client.request(RequestPayload(requestUrl = "https://httpbin.org/get"))
+        val resp = client.request(RequestPayload(requestUrl = "$BASE/get"))
         assertEquals(200, resp.status)
         assertTrue(resp.ok)
         assertTrue(resp.body.isNotBlank())
@@ -53,32 +71,32 @@ class TlsClientTest {
 
     @Test
     fun `GET httpbin body is valid JSON with url field`() {
-        val resp = client.request(RequestPayload(requestUrl = "https://httpbin.org/get"))
+        val resp = client.request(RequestPayload(requestUrl = "$BASE/get"))
         assertEquals(200, resp.status)
         val json = JsonParser.parseString(resp.body).asJsonObject
         assertTrue(json.has("url"))
-        assertEquals("https://httpbin.org/get", json.get("url").asString)
+        assertEquals("$BASE/get", json.get("url").asString)
     }
 
     @Test
     fun `GET httpbin headers are sent correctly`() {
         val resp = client.request(
             RequestPayload(
-                requestUrl = "https://httpbin.org/get",
+                requestUrl = "$BASE/get",
                 headers = mapOf("X-Test-Header" to "hello123")
             )
         )
         assertEquals(200, resp.status)
         val json = JsonParser.parseString(resp.body).asJsonObject
         val headers = json.getAsJsonObject("headers")
-        assertEquals("hello123", headers.get("X-Test-Header").asString)
+        assertEquals("hello123", firstString(headers.get("X-Test-Header")))
     }
 
     @Test
     fun `POST httpbin returns 200 with posted body`() {
         val resp = client.request(
             RequestPayload(
-                requestUrl = "https://httpbin.org/post",
+                requestUrl = "$BASE/post",
                 requestMethod = RequestMethod.POST,
                 requestBody = """{"key":"value"}""",
                 headers = mapOf("Content-Type" to "application/json")
@@ -93,24 +111,26 @@ class TlsClientTest {
     @Test
     fun `session persists cookies across requests`() {
         val sessionId = "test-session-cookies"
-        // httpbin /cookies/set sets a cookie and redirects; use /cookies to read them
+        // /cookies/set?name=value sets a cookie and redirects; use /cookies to
+        // read it. Query form works on both httpbin and go-httpbin (the path
+        // form /cookies/set/<name>/<value> 404s on go-httpbin).
         client.request(
             RequestPayload(
-                requestUrl = "https://httpbin.org/cookies/set/testcookie/abc123",
+                requestUrl = "$BASE/cookies/set?testcookie=abc123",
                 sessionId = sessionId,
                 followRedirects = true
             )
         )
         val resp = client.request(
             RequestPayload(
-                requestUrl = "https://httpbin.org/cookies",
+                requestUrl = "$BASE/cookies",
                 sessionId = sessionId
             )
         )
         assertEquals(200, resp.status)
         val json = JsonParser.parseString(resp.body).asJsonObject
         val cookies = json.getAsJsonObject("cookies")
-        assertEquals("abc123", cookies.get("testcookie").asString)
+        assertEquals("abc123", firstString(cookies.get("testcookie")))
         client.destroySession(DestroySessionPayload(sessionId))
     }
 
@@ -118,7 +138,7 @@ class TlsClientTest {
     fun `redirect is followed when followRedirects is true`() {
         val resp = client.request(
             RequestPayload(
-                requestUrl = "https://httpbin.org/redirect/1",
+                requestUrl = "$BASE/redirect/1",
                 followRedirects = true
             )
         )
@@ -129,7 +149,7 @@ class TlsClientTest {
     fun `redirect is NOT followed when followRedirects is false`() {
         val resp = client.request(
             RequestPayload(
-                requestUrl = "https://httpbin.org/redirect/1",
+                requestUrl = "$BASE/redirect/1",
                 followRedirects = false
             )
         )
@@ -138,7 +158,7 @@ class TlsClientTest {
 
     @Test
     fun `response has usedProtocol set`() {
-        val resp = client.request(RequestPayload(requestUrl = "https://httpbin.org/get"))
+        val resp = client.request(RequestPayload(requestUrl = "$BASE/get"))
         assertTrue(resp.usedProtocol.isNotBlank())
     }
 
@@ -146,8 +166,8 @@ class TlsClientTest {
     fun `destroyAll clears all sessions`() {
         val id1 = "session-a"
         val id2 = "session-b"
-        client.request(RequestPayload(requestUrl = "https://httpbin.org/get", sessionId = id1))
-        client.request(RequestPayload(requestUrl = "https://httpbin.org/get", sessionId = id2))
+        client.request(RequestPayload(requestUrl = "$BASE/get", sessionId = id1))
+        client.request(RequestPayload(requestUrl = "$BASE/get", sessionId = id2))
         val result = client.destroyAll()
         assertTrue(result.success)
     }
