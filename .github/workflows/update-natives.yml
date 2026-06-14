@@ -48,6 +48,16 @@ jobs:
           VERSION="${{ steps.check.outputs.latest }}"
           BRANCH="update-natives-v$VERSION"
 
+          # This job runs daily, so it keeps firing for the same version until
+          # the bump lands on main. If we already opened a PR for this version
+          # (open, merged, or deliberately closed), there is nothing to do.
+          EXISTING=$(gh pr list --head "$BRANCH" --state all \
+            --json state --jq '.[0].state // empty')
+          if [ -n "$EXISTING" ]; then
+            echo "A PR for $BRANCH already exists (state: $EXISTING). Nothing to do."
+            exit 0
+          fi
+
           git config user.name "PianoNic"
           git config user.email "79938743+PianoNic@users.noreply.github.com"
 
@@ -55,7 +65,10 @@ jobs:
           echo "$VERSION" > natives-version.txt
           git add natives-version.txt
           git commit -m "Bump native libraries to v$VERSION"
-          git push origin "$BRANCH"
+          # Force-push in case a stale branch from an earlier run (one that
+          # never got a PR) is still on the remote; a plain push would be
+          # rejected as a non-fast-forward and fail the whole job.
+          git push --force origin "$BRANCH"
 
           gh pr create \
             --title "Bump native libraries to v$VERSION" \
