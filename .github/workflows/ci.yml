@@ -17,6 +17,16 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    # Self-hosted go-httpbin so the HTTP tests don't depend on httpbin.org's
+    # uptime (it returns 503 often and reddened CI). go-httpbin is an
+    # API-compatible port of httpbin.
+    services:
+      httpbin:
+        image: ghcr.io/mccutchen/go-httpbin:v2.23.1
+        ports:
+          - 8080:8080
+    env:
+      HTTPBIN_BASE_URL: http://127.0.0.1:8080
     steps:
       - uses: actions/checkout@v4
 
