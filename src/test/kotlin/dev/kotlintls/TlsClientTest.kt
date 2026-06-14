@@ -111,10 +111,12 @@ class TlsClientTest {
     @Test
     fun `session persists cookies across requests`() {
         val sessionId = "test-session-cookies"
-        // /cookies/set sets a cookie and redirects; use /cookies to read them
+        // /cookies/set?name=value sets a cookie and redirects; use /cookies to
+        // read it. Query form works on both httpbin and go-httpbin (the path
+        // form /cookies/set/<name>/<value> 404s on go-httpbin).
         client.request(
             RequestPayload(
-                requestUrl = "$BASE/cookies/set/testcookie/abc123",
+                requestUrl = "$BASE/cookies/set?testcookie=abc123",
                 sessionId = sessionId,
                 followRedirects = true
             )
