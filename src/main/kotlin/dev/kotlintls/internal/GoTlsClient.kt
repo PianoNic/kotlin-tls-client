@@ -21,10 +21,15 @@ internal interface GoTlsClient : Library {
     fun wsClose(connId: String, code: Int, reason: String): String
 
     companion object {
+        // Decode the Go library's char* request/response strings as UTF-8 rather than the JVM's
+        // platform default charset. Without this, a runtime whose default isn't UTF-8 (e.g. some
+        // Android devices) mangles multi-byte UTF-8 in response bodies into mojibake.
+        private val utf8Options = mapOf(Library.OPTION_STRING_ENCODING to "UTF-8")
+
         fun load(libPath: String): GoTlsClient =
-            Native.load(libPath, GoTlsClient::class.java) as GoTlsClient
+            Native.load(libPath, GoTlsClient::class.java, utf8Options) as GoTlsClient
 
         fun loadSystem(libName: String): GoTlsClient =
-            Native.load(libName, GoTlsClient::class.java) as GoTlsClient
+            Native.load(libName, GoTlsClient::class.java, utf8Options) as GoTlsClient
     }
 }
