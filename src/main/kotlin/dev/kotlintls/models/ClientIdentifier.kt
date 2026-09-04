@@ -30,6 +30,10 @@ enum class ClientIdentifier(val value: String) {
     CHROME_144_PSK("chrome_144_PSK"),
     CHROME_146("chrome_146"),
     CHROME_146_PSK("chrome_146_PSK"),
+    CHROME_150("chrome_150"),
+    CHROME_150_PSK("chrome_150_PSK"),
+    CHROME_152("chrome_152"),
+    CHROME_152_PSK("chrome_152_PSK"),
 
     // Safari
     SAFARI_15_6_1("safari_15_6_1"),
